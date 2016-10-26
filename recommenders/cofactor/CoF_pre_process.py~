@@ -1,0 +1,148 @@
+
+# coding: utf-8
+
+# In[16]:
+
+'''
+1) Creates two files containing a maping from the actual ids (for user and items)
+and the ids used by the CoFactor
+
+2) Saves the dataset in the format used by the CoFactor 
+
+<timestamp,uid,sid>
+<timestamp,uid,sid>
+
+Where each line represents a rating of a relevant item, uid is the user id and 
+sid is the item id (referenced by song id in the CoFactor code)
+
+
+
+'''
+
+
+import sys
+import os
+import pandas as pd
+import numpy as np
+import random 
+import Cofactorization_samuel as CoF
+
+'''
+Converts the input using the unique id files for users and items
+'''
+def numerize(tp,user2id,item2id):
+    uid = map(lambda x: user2id[x], tp['userId'])
+    sid = map(lambda x: item2id[x], tp['itemId'])
+    tp['uid'] = uid
+    tp['sid'] = sid
+    return tp[['uid', 'sid']]
+
+
+
+'''
+Get the number of times an item was rated and a user rated items
+'''
+def get_count(tp, id):
+    playcount_groupbyid = tp[[id]].groupby(id, as_index=False)
+    count = playcount_groupbyid.size()
+    return count
+
+
+
+def read_ratings_file(addr, sep="\t"):
+    default_headers = ('userId','itemId','rating','timestamp')
+    default_types = {'userId':np.int32,'itemId':np.int32,'rating':np.float64,'timestamp':np.int32}
+
+    try:
+        frame = pd.read_csv(addr, sep, names=default_headers,dtype=default_types)
+        del frame['timestamp']
+        return frame
+    #Treats the case where the timestaps were removed already
+    except ValueError:
+        reduced_headers =  ('userId','itemId','rating')
+        reduced_types = {'userId':np.int32,'itemId':np.int32,'rating':np.float64}
+        frame = pd.read_csv(addr, sep, names=reduced_headers,dtype=reduced_types)
+        return frame
+    else:
+        print("Unexpected Error, pleach check read_ratings_file function and or your input files")
+
+
+
+def run(kwargs):
+    DATA_DIR = kwargs.data
+    #TODO pass this as parameters
+    partition = kwargs.part
+    trainf = partition+'.base'
+    testf = partition+'.test'
+    valf = partition+'.validation'
+
+    #data_header = ('userId','itemId','rating','timestamp')
+    tr_data = read_ratings_file(os.path.join(DATA_DIR, trainf), sep='\t')
+    te_data = read_ratings_file(os.path.join(DATA_DIR, testf), sep='\t')
+    val_data = None
+    if not kwargs.no_validation:
+        
+        val_data = read_ratings_file(os.path.join(DATA_DIR, valf), sep='\t')
+
+    
+    #creates a set containg unique users and items in the dataset
+    #TODO there is no need to use a set here
+    unique_users = set(tr_data.userId.unique())
+    unique_items = set(tr_data.itemId.unique())    
+    if not kwargs.no_validation:
+        for x in val_data.userId.unique():
+            unique_users.add(x)
+        for x in val_data.itemId.unique():
+            unique_items.add(x)
+
+
+    #Creating a unique id representation for users and items
+    item2id = dict((sid, i) for (i, sid) in enumerate(unique_items))
+    user2id = dict((sid, i) for (i, sid) in enumerate(unique_users))
+
+
+    #saving two files containg the unique usr ids and items ids
+
+    if not os.path.isdir(os.path.join(DATA_DIR, kwargs.proc_folder)):
+        os.mkdir(os.path.join(DATA_DIR, 'pro'))
+        
+    with open(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-unique_uid.txt'), 'w') as f:
+        for uid in unique_users:
+            f.write('%s\n' % uid)
+            
+    with open(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-unique_sid.txt'), 'w') as f:
+        for sid in unique_items:
+            f.write('%s\n' % sid)
+
+
+    #print "There are total of %d unique users in the training set, %d in validation, %d in test and %d unique users in the entire dataset" % (len(pd.unique(tr_data['userId'])),len(pd.unique(val_data['userId'])),len(pd.unique(te_data['userId'])), len(user2id))
+    #print "There are total of %d unique users in the training set, %d in validation, %d in test and %d unique users in the entire dataset" % (len(pd.unique(tr_data['itemId'])),len(pd.unique(val_data['itemId'])),len(pd.unique(te_data['itemId'])), len(item2id))
+
+
+    #This pieces of code should be in the pre processing scripts
+    left_sid = list()
+    for i, sid in enumerate(unique_items):
+        if sid not in tr_data.itemId.unique():
+            left_sid.append(sid)
+            
+    move_idx = val_data['itemId'].isin(left_sid)
+
+    tr_data = tr_data.append(val_data[move_idx])
+    val_data = val_data[~move_idx]
+
+    print len(te_data)
+    te_data = te_data[te_data['itemId'].isin(unique_items)]
+    te_data = te_data[te_data['userId'].isin(unique_users)]
+    print len(te_data)
+    print len(te_data.itemId.unique())
+
+
+    tr_data = numerize(tr_data,user2id,item2id)
+    tr_data.to_csv(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-train.csv'), index=False)
+
+    val_data = numerize(val_data,user2id,item2id)
+    val_data.to_csv(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-validation.csv'), index=False)
+
+    te_data = numerize(te_data,user2id,item2id)
+    te_data.to_csv(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-test.csv'), index=False)
+

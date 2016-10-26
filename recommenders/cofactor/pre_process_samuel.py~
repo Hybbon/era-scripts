@@ -1,0 +1,143 @@
+
+# coding: utf-8
+
+# In[16]:
+
+'''
+1) Creates two files containing a maping from the actual ids (for user and items)
+and the ids used by the CoFactor
+
+2) Saves the dataset in the format used by the CoFactor 
+
+<timestamp,uid,sid>
+<timestamp,uid,sid>
+
+Where each line represents a rating of a relevant item, uid is the user id and 
+sid is the item id (referenced by song id in the CoFactor code)
+
+
+
+'''
+
+
+import sys
+import os
+import pandas as pd
+import random 
+import Cofactorization_samuel as CoF
+
+def numerize(tp,user2id,song2id):
+    uid = map(lambda x: user2id[x], tp['userId'])
+    sid = map(lambda x: song2id[x], tp['movieId'])
+    tp['uid'] = uid
+    tp['sid'] = sid
+    return tp[['uid', 'sid']]
+
+# In[17]:
+
+def get_count(tp, id):
+    playcount_groupbyid = tp[[id]].groupby(id, as_index=False)
+    count = playcount_groupbyid.size()
+    return count
+
+
+def run(DATA_DIR,partition):
+    DATA_DIR = sys.argv[1] #'ml100k/'
+    #TODO pass this as parameters
+    partition = sys.argv[2] #'u1'
+    trainf = partition+'.base'
+    testf = partition+'.test'
+    valf = partition+'.validation'
+
+    data_header = ('userId','movieId','rating','timestamp')
+    tr_data = pd.read_csv(os.path.join(DATA_DIR, trainf), sep='\t', names=data_header)
+    te_data = pd.read_csv(os.path.join(DATA_DIR, testf), sep='\t', names=data_header)
+    val_data = pd.read_csv(os.path.join(DATA_DIR, valf), sep='\t', names=data_header)
+
+    # In[19]:
+
+    #TODO reimplement
+
+    unique_users = set(tr_data.userId.unique())
+    for x in val_data.userId.unique():
+        unique_users.add(x)
+     
+
+    unique_items = set(tr_data.movieId.unique())    
+    for x in val_data.movieId.unique():
+        unique_items.add(x)
+
+
+    # In[20]:
+
+    #used in the old implementation 
+    #user_activity_tr, item_popularity_tr = get_count(tr_data,'userId'),get_count(tr_data,'movieId')
+    #user_activity_te, item_popularity_te = get_count(te_data,'userId'),get_count(te_data,'movieId')
+    #unique_uid = user_activity_tr.index
+    #unique_sid = item_popularity_te.index
+
+
+    # In[21]:
+
+    #song2id = dict((sid, i) for (i, sid) in enumerate(unique_sid))
+    #user2id = dict((uid, i) for (i, uid) in enumerate(unique_uid))
+    song2id = dict((sid, i) for (i, sid) in enumerate(unique_items))
+    user2id = dict((sid, i) for (i, sid) in enumerate(unique_users))
+
+
+
+    # In[22]:
+
+    if not os.path.isdir(os.path.join(DATA_DIR, 'pro')):
+        os.mkdir(os.path.join(DATA_DIR, 'pro'))
+        
+    with open(os.path.join(DATA_DIR, 'pro', partition+'-unique_uid.txt'), 'w') as f:
+        for uid in unique_users:
+            f.write('%s\n' % uid)
+            
+    with open(os.path.join(DATA_DIR, 'pro', partition+'-unique_sid.txt'), 'w') as f:
+        for sid in unique_items:
+            f.write('%s\n' % sid)
+
+
+    # In[23]:
+
+    print "There are total of %d unique users in the training set, %d in validation, %d in test and %d unique users in the entire dataset" % (len(pd.unique(tr_data['userId'])),len(pd.unique(val_data['userId'])),len(pd.unique(te_data['userId'])), len(user2id))
+
+
+    print "There are total of %d unique users in the training set, %d in validation, %d in test and %d unique users in the entire dataset" % (len(pd.unique(tr_data['movieId'])),len(pd.unique(val_data['movieId'])),len(pd.unique(te_data['movieId'])), len(song2id))
+
+
+    # In[24]:
+
+    #This pieces of code should be in the pre processing scripts
+    left_sid = list()
+    for i, sid in enumerate(unique_items):
+        if sid not in tr_data.movieId.unique():
+            left_sid.append(sid)
+            
+    move_idx = val_data['movieId'].isin(left_sid)
+
+    tr_data = tr_data.append(val_data[move_idx])
+    val_data = val_data[~move_idx]
+
+    print len(te_data)
+    te_data = te_data[te_data['movieId'].isin(unique_items)]
+    te_data = te_data[te_data['userId'].isin(unique_users)]
+    print len(te_data)
+    print len(te_data.movieId.unique())
+
+
+    tr_data = numerize(tr_data,user2id,song2id)
+    tr_data.to_csv(os.path.join(DATA_DIR, 'pro', partition+'-train.csv'), index=False)
+
+    val_data = numerize(val_data,user2id,song2id)
+    val_data.to_csv(os.path.join(DATA_DIR, 'pro', partition+'-validation.csv'), index=False)
+
+
+    te_data = numerize(te_data,user2id,song2id)
+    te_data.to_csv(os.path.join(DATA_DIR, 'pro', partition+'-test.csv'), index=False)
+
+
+
+

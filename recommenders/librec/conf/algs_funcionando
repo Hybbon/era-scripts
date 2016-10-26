@@ -1,0 +1,16 @@
+FISM : OK
+
+LDA : OK
+
+NMF : OK
+
+RankALS : ERRO [ERROR] 2016-10-17 13:04:27,859 -- 1651
+java.lang.ArrayIndexOutOfBoundsException: 1651
+
+BHfree : Roda mas preciso conferir a saida
+
+BUCM : Nao roda
+
+AoBPR : Ainda nao roda
+
+

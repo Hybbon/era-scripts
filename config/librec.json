@@ -1,0 +1,14 @@
+{
+    "base": {
+        "alg_form" : "reeval/{0}-{1}.out",
+        "base_form" : "reeval/{0}.base",
+        "hits_form" : "reeval/{0}.test"
+    },
+    "algs":[
+        "ItemKNN_librec",
+        "ItemKNN",
+        "WRMF_librec",
+        "WRMF"
+    ],
+    "parts": ["u3"]
+}

@@ -1,0 +1,4 @@
+data/u*.*.lsvm
+config/config_*.cfg
+dist/
+out_u*/

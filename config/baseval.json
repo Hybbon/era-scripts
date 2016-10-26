@@ -1,0 +1,7 @@
+{
+    "base": {
+        "alg_form" : "reeval/{0}-{1}.out",
+        "base_form" : "reeval/{0}.base",
+        "hits_form" : "reeval/{0}.test"
+    }
+}

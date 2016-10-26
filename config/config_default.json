@@ -1,0 +1,38 @@
+{
+    "parts" : ["u1", "u2", "u3", "u4", "u5"],
+    "algs" : [
+        "BPRMF",
+        "BPRSLIM",
+        "ItemKNN",
+        "LeastSquareSLIM",
+        "MostPopular",
+        "MultiCoreBPRMF",
+        "SoftMarginRankingMF",
+        "WRMF",
+        "pureSVD"
+    ],
+    "base": {
+        "ratings" : "u.proc.data",
+        "raw" : "u.raw.data",
+        "len_ranking" : 100,
+        "alg_form" : "{0}-{1}.out",
+        "base_form" : "{0}.base",
+        "hits_form" : "{0}.test",
+        "gpra_form" : "GPRA_results/{0}run0_GPRA.out"
+    },
+    "set_op": {
+        "slices": [
+            [0, 10],
+            [0, 20],
+            [0, 100]
+        ]
+    },
+    "agreement": {
+        "len": 20
+    },
+    "pre_process": {
+        "type": "default",
+        "separator": "\t",
+        "source": "u.data"
+    }
+}
