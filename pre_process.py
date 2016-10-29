@@ -79,13 +79,28 @@ from stats import aux
 import matplotlib.pyplot as plt
 
 
-input_headers = ("user_id", "item_id", "rating", "timestamp")
-types = {'user_id':np.int32,'item_id':np.int32,'rating':np.float64,'timestamp':np.int32}
+input_headers = ("user_id", "item_id", "rating")#, "timestamp")
+types = {'user_id':np.int32,'item_id':np.int32,'rating':np.float64}#,'timestamp':np.int32}
 
-def read_ratings_file(addr, sep="\t"):
-    frame = pd.read_csv(addr, sep, names=input_headers,dtype=types)
-    del frame['timestamp']
+def read_ratings_file(addr, sep="\t",default_headers=input_headers,default_types=types):
+    
+    frame = pd.read_csv(addr, sep,header=None)
+    #remove the timestamp column
+    if len(frame.columns) == 4:
+        del frame[3]
+    frame.columns = input_headers            
     return frame
+
+    '''except:
+        reduced_headers = ("user_id", "item_id", "rating")
+        reduced_types = {'user_id':np.int32,'item_id':np.int32,'rating':np.float64}
+        frame = pd.read_csv(addr, sep, names=reduced_headers,dtype=reduced_types)
+        return frame
+    else:
+        print("Unexpected Error, pleach check read_ratings_file function and or your input files")'''
+
+
+
 
 
 def remap_series_to_ints(col):
@@ -213,14 +228,20 @@ matrizes forma a matriz original
 1)Alterar para passar a metrica desejada, atualmente estou usando mediana
 
 '''
-def personalized_rating_normalization(ratings):
+def personalized_rating_normalization(ratings,metric='median'):
 
     uniq_users = ratings.user_id.unique()
 
     ratings['to_remove'] = pd.Series(np.zeros(len(ratings)),index=ratings.index)
 
     for user in uniq_users:
-        med_rating = ratings[ratings['user_id']==user]['rating'].median()        
+        if metric == 'median':
+            med_rating = ratings[ratings['user_id']==user]['rating'].median()
+        elif metric == 'mean':
+            med_rating = ratings[ratings['user_id']==user]['rating'].mean()
+        else:
+            med_rating = 4
+
         ratings.loc[(ratings.user_id == user) & (ratings.rating < med_rating),'to_remove'] = 1
         #to_replace = list(range(int(med_rating)))
         #default_val = [-999 for _ in to_replace]
@@ -228,9 +249,10 @@ def personalized_rating_normalization(ratings):
         #primeiramente da um drop em todos os registros para o usuario 'usr'
         #depois concatena com o bkp que foi armazenado na linha anterior
         #ratings = pd.concat([ratings[ratings.user_id != user],bkp])
-  
+
 
     return ratings[ratings['to_remove'] != 1], ratings[ratings['to_remove'] == 1]
+
 
 
 
@@ -358,7 +380,7 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
     plt.close()'''
 
     #1) Remove ratings lower than the median of the user's ratings
-    ratings, irrel_ratings = personalized_rating_normalization(ratings)
+    ratings, irrel_ratings = personalized_rating_normalization(ratings,kwargs['fmetric'])
     
     #ratings = ratings[ratings['rating'] >= min_rating]
     print("After removal of ratings under {1}: {0}".format(len(ratings),
@@ -633,6 +655,8 @@ def parse_args():
     p.add_argument("-c", "--config", type=str, default="",
             help="name of an override config file. (default: none)")
     #SAMUEl
+    p.add_argument('--fmetric', type=str, default='median',
+            help='metric used to filter ratings as relevant or not')
     p.add_argument('--seeds', type=str, default=None,
             help='file containg the seed that will be used to create the cross'   
              'validation files')
