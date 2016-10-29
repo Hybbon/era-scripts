@@ -516,14 +516,41 @@ def make_folds(ratings, num_folds=5, validation=False,seed_value=123):
     return folds
 
 
-def save_folds(folds, dir_path, validation):
-    reeval_dir = os.path.join(dir_path, "reeval")
-    if not os.path.exists(reeval_dir):
-        os.makedirs(reeval_dir)
+
+'''
+Save the folds passed in the structure fold into train, test and validation 
+files.
+
+folds: The instances of each partition  (fold.train,fold.test,fold.validation)
+dir_path: The path to save the files
+validation: A boolean indication if the validation file will be used or not
+seed_number: In the case of generanting the cross validation with more than one
+seed the files are saved in different folders inside dir_path. Namely
+dir_path/0
+dir_path/1
+dir_path/2
+'''
+def save_folds(folds, dir_path, validation,use_enum=False,seed_number=0):
 
     for i, fold in enumerate(folds):
-        path = os.path.join(dir_path, "u{0}.{1}")
         #SAMUEL------------------------------------------------------
+        if use_enum:
+            path = os.path.join(dir_path,str(seed_number), "u{0}.{1}")
+            if not os.path.isdir(os.path.join(dir_path,str(seed_number))):
+                os.makedirs(os.path.join(dir_path,str(seed_number)))
+
+            reeval_dir = os.path.join(dir_path,str(seed_number), "reeval")  
+            if not os.path.exists(reeval_dir):
+                os.makedirs(reeval_dir)
+
+        else:
+            path = os.path.join(dir_path, "u{0}.{1}")
+            reeval_dir = os.path.join(dir_path, "reeval")  
+            if not os.path.exists(reeval_dir):
+                os.makedirs(reeval_dir)
+ 
+
+
         if validation:
             ensure_same_users_items(fold.base,fold.validation,fold.test)
         #-------------------------------------------------------------        
@@ -531,7 +558,7 @@ def save_folds(folds, dir_path, validation):
         save_ratings_file(path.format(i + 1, "test"), fold.test)
         save_ratings_file(path.format(i + 1, "base"), fold.base)
         if validation:
-            reeval_path = os.path.join(dir_path, "reeval", "u{0}.{1}")
+            reeval_path = os.path.join(reeval_dir, "u{0}.{1}")
             save_ratings_file(path.format(i + 1, "validation"),
                               fold.validation)
             save_ratings_file(reeval_path.format(i + 1, "base"),
@@ -600,12 +627,15 @@ def parse_args():
             help="if specified, only the raw file is generated (no "
             "pre-processing is performed)")
     p.add_argument("-f", "--folds", type=int, default=5,
-            help="number of folds to be created")
+            help="number of folds to be crea ted")
     p.add_argument("-n", "--no_validation", action='store_false',
             help="if specified, no validation folds are generated")
     p.add_argument("-c", "--config", type=str, default="",
             help="name of an override config file. (default: none)")
-
+    #SAMUEl
+    p.add_argument('--seeds', type=str, default=None,
+            help='file containg the seed that will be used to create the cross'   
+             'validation files')
     return p.parse_args()
 
 
@@ -665,8 +695,23 @@ def main():
     if len(args.proc_file):
         save_ratings_file(os.path.join(out_dir, args.proc_file), ratings)
 
-    folds = make_folds(ratings, args.folds, args.no_validation)
-    save_folds(folds, out_dir, args.no_validation)
+
+    seeds = []
+    if args.seeds != None:
+        with open(args.seeds) as s:
+            for line in s:
+                seeds.append(int(line))
+
+        print(seeds)
+        for i,seed in enumerate(seeds):
+            folds = make_folds(ratings, args.folds, args.no_validation,seed_value=seed)
+            save_folds(folds, out_dir, args.no_validation,use_enum=True,seed_number=i)
+
+    else:
+        folds = make_folds(ratings, args.folds, args.no_validation)
+        save_folds(folds, out_dir, args.no_validation)
+
+   
 
 
 if __name__ == "__main__":
