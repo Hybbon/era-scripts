@@ -75,7 +75,7 @@ import json
 import re
 from collections import namedtuple
 from stats import aux
-
+import time
 import matplotlib.pyplot as plt
 
 
@@ -98,9 +98,6 @@ def read_ratings_file(addr, sep="\t",default_headers=input_headers,default_types
         return frame
     else:
         print("Unexpected Error, pleach check read_ratings_file function and or your input files")'''
-
-
-
 
 
 def remap_series_to_ints(col):
@@ -231,9 +228,46 @@ matrizes forma a matriz original
 def personalized_rating_normalization(ratings,metric='median'):
 
     uniq_users = ratings.user_id.unique()
-
     ratings['to_remove'] = pd.Series(np.zeros(len(ratings)),index=ratings.index)
 
+
+
+
+    '''medians = {}
+
+    for row in ratings.index:
+        usr = ratings.iloc[row].user_id
+        if usr in medians:
+            medians[usr].append(ratings.loc[row].rating)
+        else:
+            medians[usr] = [ratings.loc[row].rating]
+
+
+    for key in medians.keys():
+        medians[key] = np.median(medians[key])
+
+    #ratings.sort_values(by='user_id')
+    ini1 = time.time()
+    user_medians = ratings.groupby(['user_id'])['rating'].median()
+    print('1st' + str(time.time()-ini1))
+
+    ratings[ratings]
+
+    ini2 = time.time()
+    for row in ratings.index:
+        usr = int(ratings.iloc[row].user_id)
+        if ratings.loc[row].rating < medians[usr]:
+            ratings.loc[row,'to_remove'] = 1
+    
+
+    print('2st' + str(time.time()-ini2))'''
+
+
+
+
+    
+    ini2 = time.time()
+    
     for user in uniq_users:
         if metric == 'median':
             med_rating = ratings[ratings['user_id']==user]['rating'].median()
@@ -249,8 +283,8 @@ def personalized_rating_normalization(ratings,metric='median'):
         #primeiramente da um drop em todos os registros para o usuario 'usr'
         #depois concatena com o bkp que foi armazenado na linha anterior
         #ratings = pd.concat([ratings[ratings.user_id != user],bkp])
-
-
+    
+    print('2st' + str(time.time()-ini2))
     return ratings[ratings['to_remove'] != 1], ratings[ratings['to_remove'] == 1]
 
 
