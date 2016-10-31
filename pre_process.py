@@ -268,7 +268,7 @@ def personalized_rating_normalization(ratings,metric='median'):
 
 
 
-    ini2 = time.time()
+    '''ini2 = time.time()
     
     for user in uniq_users:
         if metric == 'median':
@@ -286,7 +286,7 @@ def personalized_rating_normalization(ratings,metric='median'):
         #depois concatena com o bkp que foi armazenado na linha anterior
         #ratings = pd.concat([ratings[ratings.user_id != user],bkp])
     
-    print('2st' + str(time.time()-ini2))
+    print('2st' + str(time.time()-ini2))'''
     return ratings[ratings['to_remove'] != 1], ratings[ratings['to_remove'] == 1]
 
 
@@ -344,26 +344,28 @@ TODO check if I need to do the same thing for users
 '''
 def ensure_same_users_items(train_data,val_data,test_data):
 
+    ini = time.time()    
 
     print("item train {0} items val {1}".format(len(train_data.item_id.unique()),len(val_data.item_id.unique())))
     
-    unique_items = set(train_data.item_id.unique())
-    unique_users = [val_data.user_id.unique(),test_data.user_id.unique()]
+    unique_items_train = set(train_data.item_id.unique())
+    '''unique_users = [val_data.user_id.unique(),test_data.user_id.unique()]'''
     
     #removing users that are not in all files
     #TODO check if it is the best way to do this
-    union_users = set(train_data.user_id.unique())
-    intersection_users = set(train_data.user_id.unique())
+    #union_users = set(train_data.user_id.unique())
+    #TODO remove
+    '''intersection_users = set(train_data.user_id.unique())
     for x in unique_users:
         union_users = union_users.union(x)
         intersection_users = intersection_users.intersection(x)
-    
+    '''
 
-    users_not_in_all = union_users - intersection_users
+    '''users_not_in_all = union_users - intersection_users
 
     print (users_not_in_all)
     print("Users {0} in union {1} in intersection".format(len(union_users),len(intersection_users)))
-
+    
     users_not_in_all_aux = train_data['user_id'].isin(users_not_in_all)
     train_data = train_data[~users_not_in_all_aux]
     users_not_in_all_aux = val_data['user_id'].isin(users_not_in_all)
@@ -372,17 +374,22 @@ def ensure_same_users_items(train_data,val_data,test_data):
     test_data = test_data[~users_not_in_all_aux]
     print("Users {0} in union {1} in intersection".format(len(union_users),len(intersection_users)))
     #------------------------------------------------------------------
-
+    '''
 
     #Change the files in a way that the training file contains all possible items
-    for x in val_data.item_id.unique():
+    unique_items = unique_items_train.union(val_data.item_id.unique())
+    left_sid = list(unique_items - unique_items_train)
+    
+    #TODO remove
+    '''for x in val_data.item_id.unique():
         unique_items.add(x)    
 
     left_sid = list()
     for i, sid in enumerate(unique_items):
         if sid not in train_data.item_id.unique():
             left_sid.append(sid)
-            
+    '''
+        
     items_not_in_train = val_data['item_id'].isin(left_sid)
 
     tr_data = train_data.append(val_data[items_not_in_train])
@@ -390,7 +397,7 @@ def ensure_same_users_items(train_data,val_data,test_data):
 
     test_data = test_data[test_data['item_id'].isin(unique_items)]
 
-
+    print("unique items "+ str(time.time()-ini))
 
 def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
                    min_ratings=10, use_abs_rating_counts=False, **kwargs):
