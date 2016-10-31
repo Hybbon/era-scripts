@@ -230,9 +230,6 @@ def personalized_rating_normalization(ratings,metric='median'):
     uniq_users = ratings.user_id.unique()
     ratings['to_remove'] = pd.Series(np.zeros(len(ratings)),index=ratings.index)
 
-
-
-
     '''medians = {}
 
     for row in ratings.index:
@@ -262,10 +259,15 @@ def personalized_rating_normalization(ratings,metric='median'):
 
     print('2st' + str(time.time()-ini2))'''
 
+    ini1 = time.time()
+    user_medians = ratings.groupby(['user_id'])['rating'].median()
+    for user in uniq_users:
+        ratings.loc[(ratings.user_id == user) & (ratings.rating < user_medians[user]),'to_remove'] = 1
+    print('1st' + str(time.time()-ini1))
 
 
 
-    
+
     ini2 = time.time()
     
     for user in uniq_users:
