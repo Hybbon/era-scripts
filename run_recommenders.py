@@ -313,7 +313,7 @@ def librec_convert_output(from_path, to_path):
 
     try:
         in_file = open(from_path)
-    except FileNotFoundError:        
+    except:        
         out_dir = os.path.join(*from_path.split("/")[:-1])
         #pega o caminha do arquivo que realmente tem a saida 
         actual_file = glob.glob(os.path.join(out_dir,'*items*'))[-1]
@@ -345,7 +345,7 @@ def librec_run(alg, kwargs):
     out_path = os.path.join(run_dir, out_file)
 
     os.system(librec_cmd.format(librec_cfg=cfg_path, **kwargs))
-
+    print("File to write -----> "+out_file)
     librec_convert_output(out_path, kwargs['pred'])
     print("Converte out do LibRec " + alg + ": " + out_path + " -> " + kwargs['pred'])
 

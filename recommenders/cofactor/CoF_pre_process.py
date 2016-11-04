@@ -25,7 +25,7 @@ import os
 import pandas as pd
 import numpy as np
 import random 
-import Cofactorization_samuel as CoF
+import Cofactorization as CoF
 
 '''
 Converts the input using the unique id files for users and items

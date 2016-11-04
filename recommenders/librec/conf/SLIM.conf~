@@ -2,9 +2,9 @@ ratings.setup=-columns 0 1 2 -threshold -1
 
 recommender=SLIM
 
-num.max.iter=150
+num.max.iter=10
 
-num.neighbors=100
+num.neighbors=10
 similarity=cos-binary
 num.shrinkage=-1
 

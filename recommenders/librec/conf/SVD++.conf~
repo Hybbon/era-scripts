@@ -3,7 +3,7 @@ ratings.setup=-columns 0 1 2 -threshold -1
 recommender=SVD++
 
 num.factors=10
-num.max.iter=200
+num.max.iter=20
 
 learn.rate=0.01 -max -1 -bold-driver
 reg.lambda=0.1 -u 0.1 -i 0.1 -b 0.1 -s 0.001
