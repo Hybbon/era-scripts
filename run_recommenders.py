@@ -100,7 +100,8 @@ def parse_args():
         default="recommenders/librec/", help="path to"
         " LibRec's directory, relative to"
         " the program's run path. (default: %(default)s)")
-    p.add_argument("-p", "--python2", type=str, default="/home/samuel/anaconda2/bin/python2", #SAMUEL
+    p.add_argument("-p", "--python2", type=str, 
+        default=os.path.join(glob.glob(os.environ['HOME']+'/anaconda*')[0], 'bin/python2'), #SAMUEL
         help="absolute path to the Python 2 binaries. Required"
         " packages: numpy, scipy, cython, sparsesvd.")
     p.add_argument("-s", "--puresvd", type=str,
@@ -110,7 +111,9 @@ def parse_args():
             help="if specified, any previous results are generated once again, "
             "instead of being kept whenever possible.")
     p.add_argument("--cofactor", type=str,
-        default="recommenders/cofactor/run_cofactor.py")    
+        default="recommenders/cofactor/run_cofactor.py")
+    p.add_argument("--libfm", type=str,
+        default="recommenders/libfm/libfm_ranking.py")  
 
     return p.parse_args()
 
@@ -194,6 +197,20 @@ def cofactor_run(kwargs):
     command = CoFactor_cmd.format(**kwargs)
     print(command)
     os.system(command)
+
+
+
+
+# Libfm STUFF
+libfm_cmd = ("{python2} {libfm} {data_folder} -p {p} -n {num_items}")
+
+
+def libfm_run(kwargs):
+    command = libfm_cmd.format(**kwargs)
+    print(command)
+    os.system(command)
+
+
 
 
 # COFIRANK STUFF
@@ -298,7 +315,7 @@ def librec_make_config(alg, kwargs, cfg_path, out_path):
         for line in [base_in, test_in, output_setup, ranking_setup]:
             out.write(line + "\n")
 
-librec_cmd = "java -jar {librec_binary} -c {librec_cfg}"
+librec_cmd = "java {Xmx} -jar {librec_binary} -c {librec_cfg}"
 
 def librec_convert_output(from_path, to_path):
 
@@ -385,6 +402,7 @@ def arg_set_for_run(p, alg, args, conf):
     python2_binary_str = args.python2
     puresvd_script_str = args.puresvd
     cofactor_script_str = args.cofactor #SAMUEL
+    libfm_script_str = args.libfm #SAMUEL
     
     librec_binary_str = os.path.join(args.librec, "librec.jar")
     librec_template_dir_str = os.path.join(args.librec, "conf")
@@ -395,6 +413,7 @@ def arg_set_for_run(p, alg, args, conf):
         'python2': python2_binary_str,
         'puresvd': puresvd_script_str,
         'cofactor': cofactor_script_str,
+        'libfm': libfm_script_str,
         'mml_binary': mml_binary_str,
         'mml_binary_rp': mml_binary_rp_str,
         'cr_binary': cr_binary_str,
@@ -437,6 +456,7 @@ non_mml_algs = {
     "PRankD_librec" : librec_closure("PRankD"),
     "FISM_librec" : librec_closure("FISM"),
     "CoFactor" : cofactor_run,
+    "libfm" :   libfm_run
     
 }
 

@@ -88,9 +88,9 @@ def plot(res, dsr, output_dir, conf, ext='pdf'):
             for i, (cl_m, y_ticks) in enumerate(zip(cl_matrices, cl_y_ticks)):
                 figsize = (45, max(cl_m.shape[0] // 3, 2))
                 path = os.path.join(alg_dir, "Cluster {0}.{1}".format(i, ext))
-                plot_matrix_heatmap(path, "Concordância por posição por"
-                                    " usuário", "Posição no ranking", x_ticks,
-                                    "ID do usuário", y_ticks, cl_m, text=True,
+                plot_matrix_heatmap(path, "Concordancia por posicao por"
+                                    " usuario", "Posicao no ranking", x_ticks,
+                                    "ID do usuario", y_ticks, cl_m, text=True,
                                     color_min=0, color_max=len(dsr.algs),
                                     rows_per_plot=len(y_ticks), cmap='RdPu',
                                     figsize=figsize)

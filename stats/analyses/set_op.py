@@ -204,13 +204,13 @@ def plot(res_tuple, dsr, output_dir, conf, ext='pdf'):
         frame_hits_mean = normalize_by_num_users(frame_hits_mean)
 
         # plot_bar_chart(os.path.join(slice_dir, 'isect_all.{0}'.format(ext)),
-        #                "Interseção entre k algoritmos (todos os itens)",
-        #                "Número de algoritmos combinados (k)", comb_lengths,
+        #                "Intersecao entre k algoritmos (todos os itens)",
+        #                "Numero de algoritmos combinados (k)", comb_lengths,
         #                "Itens em comum", isect_all)
 
         # plot_bar_chart(os.path.join(slice_dir, 'isect_hits.{0}'.format(ext)),
-        #                "Interseção entre k algoritmos (apenas hits)",
-        #                "Número de algoritmos combinados (k)", comb_lengths,
+        #                "Intersecao entre k algoritmos (apenas hits)",
+        #                "Nusmero de algoritmos combinados (k)", comb_lengths,
         #                "Itens em comum", isect_hits)
 
         # plot_all_and_hits(os.path.join(slice_dir,

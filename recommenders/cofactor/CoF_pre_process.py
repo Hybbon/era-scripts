@@ -120,7 +120,7 @@ def run(kwargs):
 
 
     #This pieces of code should be in the pre processing scripts
-    left_sid = list()
+    '''left_sid = list()
     for i, sid in enumerate(unique_items):
         if sid not in tr_data.itemId.unique():
             left_sid.append(sid)
@@ -134,7 +134,7 @@ def run(kwargs):
     te_data = te_data[te_data['itemId'].isin(unique_items)]
     te_data = te_data[te_data['userId'].isin(unique_users)]
     print len(te_data)
-    print len(te_data.itemId.unique())
+    print len(te_data.itemId.unique())'''
 
 
     tr_data = numerize(tr_data,user2id,item2id)
