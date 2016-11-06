@@ -76,7 +76,10 @@ def save_predictions(train_data,test_data, Et, Eb, user_idx, unique_uid, unique_
     
     #faz uma ordenacao parcial, ou seja, somente retorna os k maiores sem que 
     #eles estejam necessariamente ordenados entre si
-    idx_topk_part = bn.argpartsort(-X_pred, k, axis=1) 
+    if '1.1.0' in bn.__version__:
+        idx_topk_part = bn.argpartsort(-X_pred, k, axis=1) 
+    else:
+        idx_topk_part = bn.argpartition(-X_pred, k, axis=1) 
     #pega os valores dos indices retornados anteriormente
     topk_part = X_pred[np.arange(batch_users)[:, np.newaxis],
                        idx_topk_part[:, :k]] 
@@ -292,9 +295,7 @@ def run(kwargs):
     print 'Test MAP@100: %.4f' % rec_eval.map_at_k(train_data, test_data, U, V, k=10, vad_data=vad_data)
 
     save_predictions(train_data,test_data, U, V.T, slice(0,len(unique_uid),None),unique_uid, unique_sid,output_f = os.path.join(kwargs.output_dir,kwargs.part+'-CoFactor.out'),DATA_DIR=DATA_DIR)
-
     cmd = "rm {0}*.npy".format(os.path.join(dir_predix,kwargs.part))
-    print 
     os.system(cmd)
 
     # In[134]:
@@ -306,3 +307,4 @@ if __name__ == '__main__':
     DATA_DIR = sys.argv[1]
     partition = sys.argv[2]
     run(DATA_DIR,partition)
+
