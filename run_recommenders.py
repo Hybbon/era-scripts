@@ -315,7 +315,7 @@ def librec_make_config(alg, kwargs, cfg_path, out_path):
         for line in [base_in, test_in, output_setup, ranking_setup]:
             out.write(line + "\n")
 
-librec_cmd = "java {Xmx} -jar {librec_binary} -c {librec_cfg}"
+librec_cmd = "java -jar {librec_binary} -c {librec_cfg}"
 
 def librec_convert_output(from_path, to_path):
 
