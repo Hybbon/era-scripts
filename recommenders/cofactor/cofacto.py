@@ -428,7 +428,10 @@ def save_predictions(train_data,test_data, Et, Eb, user_idx, k=100,
     
     #faz uma ordenacao parcial, ou seja, somente retorna os k maiores sem que 
     #eles estejam necessariamente ordenados entre si
-    idx_topk_part = bn.argpartsort(-X_pred, k, axis=1) 
+    if '1.1.0' in bn.__version__:
+        idx_topk_part = bn.argpartsort(-X_pred, k, axis=1) 
+    else:
+        idx_topk_part = bn.argpartition(-X_pred, k, axis=1)
     #pega os valores dos indices retornados anteriormente
     topk_part = X_pred[np.arange(batch_users)[:, np.newaxis],
                        idx_topk_part[:, :k]] 

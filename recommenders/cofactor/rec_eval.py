@@ -161,7 +161,10 @@ def precision_at_k_batch(train_data, heldout_data, Et, Eb, user_idx,
 
     X_pred = _make_prediction(train_data, Et, Eb, user_idx,
                               batch_users, mu=mu, vad_data=vad_data)
-    idx = bn.argpartsort(-X_pred, k, axis=1) #retorna os indices dos valores top k valores
+    if '1.1.0' in bn.__version__:
+        idx = bn.argpartsort(-X_pred, k, axis=1) #retorna os indices dos valores top k valores
+    else:
+        idx = bn.argpartsort(-X_pred, k, axis=1) #retorna os indices dos valores top k valores
     X_pred_binary = np.zeros_like(X_pred, dtype=bool)
     X_pred_binary[np.arange(batch_users)[:, np.newaxis], idx[:, :k]] = True #deixa como true somente os top itens ordenados anteriormente
 
@@ -186,7 +189,10 @@ def recall_at_k_batch(train_data, heldout_data, Et, Eb, user_idx,
 
     X_pred = _make_prediction(train_data, Et, Eb, user_idx,
                               batch_users, mu=mu, vad_data=vad_data)
-    idx = bn.argpartsort(-X_pred, k, axis=1)
+    if '1.1.0' in bn.__version__:
+        idx = bn.argpartsort(-X_pred, k, axis=1)
+    else:
+        idx = bn.argpartition(-X_pred, k, axis=1)
     X_pred_binary = np.zeros_like(X_pred, dtype=bool)
     X_pred_binary[np.arange(batch_users)[:, np.newaxis], idx[:, :k]] = True
 
@@ -251,7 +257,11 @@ def NDCG_binary_at_k_batch(train_data, heldout_data, Et, Eb, user_idx,
 
     X_pred = _make_prediction(train_data, Et, Eb, user_idx,
                               batch_users, mu=mu, vad_data=vad_data)
-    idx_topk_part = bn.argpartsort(-X_pred, k, axis=1)
+    if '1.1.0' in bn.__version__:
+        idx_topk_part = bn.argpartsort(-X_pred, k, axis=1)
+    else:
+        idx_topk_part = bn.argpartition(-X_pred, k, axis=1)
+
     topk_part = X_pred[np.arange(batch_users)[:, np.newaxis],
                        idx_topk_part[:, :k]]
     idx_part = np.argsort(-topk_part, axis=1)
@@ -278,7 +288,10 @@ def MAP_at_k_batch(train_data, heldout_data, Et, Eb, user_idx, mu=None, k=100,
 
     X_pred = _make_prediction(train_data, Et, Eb, user_idx, batch_users, mu=mu,
                               vad_data=vad_data)
-    idx_topk_part = bn.argpartsort(-X_pred, k, axis=1) #faz uma ordenacao parcial, ou seja, somente retorna os k maiores sem que eles estejam necessariamente ordenados entre si
+    if '1.1.0' in bn.__version__:
+        idx_topk_part = bn.argpartsort(-X_pred, k, axis=1) #faz uma ordenacao parcial, ou seja, somente retorna os k maiores sem que eles estejam necessariamente ordenados entre si
+    else:
+        idx_topk_part = bn.argpartition(-X_pred, k, axis=1) 
     topk_part = X_pred[np.arange(batch_users)[:, np.newaxis],
                        idx_topk_part[:, :k]] #pega os valores dos indices retornados anteriormente
     idx_part = np.argsort(-topk_part, axis=1) #retorna os indices ordenados a partir da pre selecao feita nas duas linhas anteriores
