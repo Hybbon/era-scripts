@@ -219,7 +219,7 @@ def user_count_dict(ratings):
 
 '''
 Retorna duas matrizes de rating, a primeira contem somente os ratings relevantes
-e a segunda contem os ratings considerados nao relevantes. A união das duas 
+e a segunda contem os ratings considerados nao relevantes. A uniao das duas 
 matrizes forma a matriz original
 
 1)Alterar para passar a metrica desejada, atualmente estou usando mediana
@@ -229,6 +229,21 @@ def personalized_rating_normalization(ratings,metric='median'):
 
     uniq_users = ratings.user_id.unique()
     ratings['to_remove'] = pd.Series(np.zeros(len(ratings)),index=ratings.index)
+
+    ini1 = time.time()
+
+    if metric == 'median':
+        user_medians = ratings.groupby(['user_id'])['rating'].median()
+        for user in uniq_users:
+            ratings.loc[(ratings.user_id == user) & (ratings.rating < user_medians[user]),'to_remove'] = 1
+        print('median time:' + str(time.time()-ini1))
+        return ratings[ratings['to_remove'] != 1], ratings[ratings['to_remove'] == 1]
+    elif 'fixed':
+        print('fixed time' + str(time.time()-ini1))
+        return ratings[ratings['rating'] >= 4], ratings
+
+        
+
 
     '''medians = {}
 
@@ -259,14 +274,6 @@ def personalized_rating_normalization(ratings,metric='median'):
 
     print('2st' + str(time.time()-ini2))'''
 
-    ini1 = time.time()
-    user_medians = ratings.groupby(['user_id'])['rating'].median()
-    for user in uniq_users:
-        ratings.loc[(ratings.user_id == user) & (ratings.rating < user_medians[user]),'to_remove'] = 1
-    print('1st' + str(time.time()-ini1))
-
-
-
 
     '''ini2 = time.time()
     
@@ -287,7 +294,7 @@ def personalized_rating_normalization(ratings,metric='median'):
         #ratings = pd.concat([ratings[ratings.user_id != user],bkp])
     
     print('2st' + str(time.time()-ini2))'''
-    return ratings[ratings['to_remove'] != 1], ratings[ratings['to_remove'] == 1]
+
 
 
 
@@ -404,18 +411,27 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
     """Removes non-frequent movies or ratings under a certain score."""
 
 
-    print("Argumentos")
-    print(kwargs)
     process_stats = []
     users_countings = []
     items_countings = []
+
+    stats_file = open(os.path.join(kwargs['output_dir'],'pre_process.stats'),'w')
+    stats_file.write('Users min ratings: %d\n' %(min_cnt))
+    
+
     # Converts all ratings to integers
     ratings['rating'] = ratings['rating'].apply(lambda x: int(x))
     print("Initial length: {0}".format(len(ratings)))
     
     uniq_users = ratings.user_id.unique()
-    process_stats.append(datailed_dataset_stats(ratings))
-    
+    if not kwargs['silent']:
+        process_stats.append(datailed_dataset_stats(ratings))
+    else:
+        stats_file.write('Num initial users: %d\n' %(len(uniq_users)))
+        stats_file.write('Num initial items: %d\n' %(len(ratings.item_id.unique())))
+
+
+
     users_countings.append([len(ratings[ratings.user_id == x]) for x in uniq_users])   
     '''plt.hist(num_ratings_per_user,bins=75)
     print(a)   
@@ -461,8 +477,9 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
 
     ##TODO Salvar as matrizes com os relevantes e os irrelevantes       
     print("After removal of non-frequent items: {0}".format(len(ratings)))
-    print_dataset_stats(ratings)
-    process_stats.append(datailed_dataset_stats(ratings))
+    if not kwargs['silent']:
+        print_dataset_stats(ratings)
+        process_stats.append(datailed_dataset_stats(ratings))
 
     user_counts = user_count_dict(ratings)
 
@@ -478,8 +495,6 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
 
     #Saving statistics
     
-    
-    stats_file = open(os.path.join(kwargs['output_dir'],'pre_process.stats'),'w')
     stats_file.write('Use abs ratings counts: %s\n' %(use_abs_rating_counts))
 
     if use_abs_rating_counts:
@@ -488,24 +503,29 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
         stats_file.write('Item min ratings perc: %d\n' %(min_freq))
         stats_file.write('Item min ratings total: %d\n' %(min_freq*len(uniq_users)))
 
-
-    stats_file.write('Users min ratings: %d\n' %(min_cnt))
     
+    
+    
+    if not kwargs['silent']:
+        stats_keys = ['num_users','num_items','sparsity','avg_ratings_per_user',
+                        'max_ratings_per_user','min_ratings_per_user',
+                        'avg_ratings_per_item','max_ratings_per_item',
+                        'min_ratings_per_item']
 
-    stats_keys = ['num_users','num_items','sparsity','avg_ratings_per_user',
-                    'max_ratings_per_user','min_ratings_per_user',
-                    'avg_ratings_per_item','max_ratings_per_item',
-                    'min_ratings_per_item']
-
-        
-    stats_file.write(';'.join(stats_keys)+'\n')
-    for stat in process_stats:
-        stats_file.write(';'.join([str(stat[x]) for x in stats_keys])+'\n')
+            
+        stats_file.write(';'.join(stats_keys)+'\n')
+        for stat in process_stats:
+            stats_file.write(';'.join([str(stat[x]) for x in stats_keys])+'\n')
+    else:
+        num_users, num_items, sparsity = dataset_stats(ratings)
+        stats_file.write("Number of users: %d \n" %(num_users))
+        stats_file.write("Number of items: %d \n" %(num_items))
+        stats_file.write("Rating matrix sparsity: %f \n" %(sparsity))        
 
     stats_file.close()
 
 
-    plot_histograms(2,2,users_countings,**kwargs)
+    #plot_histograms(2,2,users_countings,**kwargs)
 
 
 
@@ -703,6 +723,8 @@ def parse_args():
     p.add_argument('--seeds', type=str, default=None,
             help='file containg the seed that will be used to create the cross'   
              'validation files')
+    p.add_argument('-s','--silent', action='store_true',
+            help = 'Do not generate statistics')
     return p.parse_args()
 
 
