@@ -459,7 +459,6 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
 
     if use_abs_rating_counts:
         rating_counts = rating_count_dict(ratings)
-
         def get_rcounts(x):
             return rating_counts[x]
         ratings = ratings[ratings['item_id'].apply(get_rcounts) >= min_ratings]
