@@ -105,7 +105,7 @@ def parse_args():
         help="absolute path to the Python 2 binaries. Required"
         " packages: numpy, scipy, cython, sparsesvd.")
     p.add_argument("-s", "--puresvd", type=str,
-        default="recommenders/BayesianDiversity/recommender.py")
+        default="recommenders/bayesiandiversity/recommender.py")
     p.add_argument("-n", "--num_processes", type=int, default=1)
     p.add_argument("-w", "--overwrite", action="store_true",
             help="if specified, any previous results are generated once again, "
@@ -479,6 +479,8 @@ def run(arg_set):
 
 def main():
     args = parse_args()
+
+    print("PY2: "+args.python2)
     conf = stats.aux.load_configs(stats.aux.CONF_DEFAULT,
                             os.path.join(args.data, stats.aux.BASE_CONF),
                             args.config)
