@@ -68,7 +68,7 @@ if __name__ == "__main__":
     
     header = ("user_id","item_id","rating")
     types = {"user_id": np.int32, "item_id" : np.int32, "rating" : np.int32}
-    for p in range(1,2):
+    for p in range(1,6):
         part = 'u'+str(p)
         train = pd.read_csv(os.path.join(args.data,part+'.base'),sep="\t",names=header, dtype=types)
         test = pd.read_csv(os.path.join(args.data,part+'.test'),sep="\t",names=header, dtype=types)
