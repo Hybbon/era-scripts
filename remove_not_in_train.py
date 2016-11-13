@@ -44,7 +44,7 @@ def ensure_same_users_items(train_data,val_data,test_data):
 
     
 
-    tr_data = train_data.append(val_data[items_not_in_train])
+    train_data = train_data.append(val_data[items_not_in_train])
     val_data = val_data[~items_not_in_train]
 
 
@@ -55,6 +55,10 @@ def ensure_same_users_items(train_data,val_data,test_data):
 
     print("unique items time: "+ str(time.time()-ini))
 
+    if len(left_sid) > 0:
+        return train_data,val_data,test_data,True
+    else:
+        return train_data,val_data,test_data,False
 
 
 
@@ -64,13 +68,21 @@ if __name__ == "__main__":
     
     header = ("user_id","item_id","rating")
     types = {"user_id": np.int32, "item_id" : np.int32, "rating" : np.int32}
-    for p in range(1,6):
+    for p in range(1,2):
         part = 'u'+str(p)
         train = pd.read_csv(os.path.join(args.data,part+'.base'),sep="\t",names=header, dtype=types)
         test = pd.read_csv(os.path.join(args.data,part+'.test'),sep="\t",names=header, dtype=types)
+        
         validation = pd.read_csv(os.path.join(args.data,part+'.validation'),sep="\t",names=header, dtype=types)
 
-        ensure_same_users_items(train,validation,test)        
+        train,validation,test,need_save =  ensure_same_users_items(train,validation,test)
 
+
+        if need_save:
+            print("Need to save the changes")
+            train.to_csv(os.path.join(args.data,part+'.base'), header=False, index=False, sep="\t", columns=header)
+            validation.to_csv(os.path.join(args.data,part+'.validation'), header=False, index=False, sep="\t", columns=header)
+            test.to_csv(os.path.join(args.data,part+'.test'), header=False, index=False, sep="\t", columns=header)    
+        
 
 
