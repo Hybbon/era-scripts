@@ -52,12 +52,15 @@ The returned structure can be seen as an 3-dimensional triangular matrix.
 Therefore, if for a pair of algorithms (A,B) the distances can be stored in 
 distances[A][B] or distances[B][A]
 '''
-def distance_matrix_users(algs, function, num_processes):
+def distance_matrix_users(algs, function,algs_to_compare = [], num_processes=1):
     """Generates pairwise distance matrix according to a distance function"""
     index_users = algs[list(algs.keys())[0]].keys()
     distances = {}
 
-    algs_names = sorted(algs.keys())
+    if len(algs_to_compare) == 0:
+        algs_names = sorted(algs.keys())
+    else:
+        algs_names = sorted(algs_to_compare)
 
     for i,alg1 in enumerate(algs_names):
         #contructing the triangular matrix

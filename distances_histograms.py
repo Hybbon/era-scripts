@@ -21,6 +21,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from stats.file_input import rankings_dict
+import stats.aux
 
 
 
@@ -33,11 +34,15 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("files", nargs="+",
                         help="ranking files to be compared.")
-    parser.add_argument("-o", "--output", default="distances.csv",
-                        help="output csv to be written. (default: %(default)s)")
-    parser.add_argument("-p", "--processes", type=int, default=1,
-                        help="number of processes for parallel execution. "
-                        "(default: %(default)s)")
+    parser.add_argument("-c",'--config',type=str,default="config.json",
+                        help="Config file")    
+    parser.add_argument("-o", "--output", default="./",
+                        help="output dir to plot the histograms)")
+    parser.add_argument("-p","--part", default="u1",
+                        help="Partition to compute the distances")
+    #parser.add_argument("-p", "--processes", type=int, default=1,
+    #                    help="number of processes for parallel execution. "
+    #                    "(default: %(default)s)")
     parser.add_argument("-l", "--length", type=int, default=20,
                         help="length of the rankings to be considered")
     return parser.parse_args()
@@ -111,11 +116,27 @@ if __name__ == '__main__':
 
 
     args = parse_args()
+    configs = stats.aux.load_configs(args.config)
 
-    alg_files = sorted(glob.glob('../../../datasets/ml-100k/u1*.out'))
+
+    #alg_files = sorted(glob.glob('../../../datasets/ml-100k/u1*.out'))
     algs = dist.load_algs(args.files,args.length)
-    dist_values = dist.distance_matrix_users(algs,dist.kendall,1)
-    plot_histograms(dist_values)
+    for group in configs['alg_groups'].keys():
+        algs_to_compare = []
+        for alg in configs['alg_groups'][group]:
+            file_name = args.part+"-"+alg+".out"
+
+            if file_name in algs:
+                algs_to_compare.append(file_name)
+
+        print(algs_to_compare)
+
+        dist_values = dist.distance_matrix_users(algs,dist.kendall,algs_to_compare,1)
+        plot_histograms(dist_values,args.output)
+
+
+
+    
 
 
 '''    for i in range(len(alg_files)):
