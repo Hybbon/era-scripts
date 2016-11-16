@@ -26,7 +26,23 @@ import stats.aux
 
 
 
+'''
+Groups the users using the quartiles computed for the number of ratings.
 
+
+'''
+def generate_users_quartiles(ratings):
+
+    #count the number of ratings of each user and computes the quartiles
+    user_counts = ratings.user_id.value_counts()
+    quartiles = [np.percentile(user_counts,x) for x in [25,50,75]]
+    
+    users_quartiles = []
+    for q in quartiles:
+        users_quartiles.append(user_counts[user_counts < q].index)    
+    
+    users_quartiles.append(user_counts[user_counts >= quartiles[-1]].index)
+    return users_quartiles
 
 def parse_args():
     """Parses command line parameters through argparse and returns parsed args.
@@ -45,7 +61,12 @@ def parse_args():
     #                    "(default: %(default)s)")
     parser.add_argument("-l", "--length", type=int, default=20,
                         help="length of the rankings to be considered")
+    
+    parser.add_argument("-d","--dist_func",type=str,default="kendall",
+                        help="Distance function to be used when comparing the rankings")
     return parser.parse_args()
+
+
 
 def get_distances(distances_matrix,alg1,alg2):
     
@@ -66,14 +87,14 @@ between the rankings recommended to the users by distinc algorithms and plots
 series of histogram for each pair of algorithms
 
 '''
-def plot_histograms(values,out_dir='./'):
+def plot_histograms(values,users_to_plot=[],out_dir='./'):
 
 
     if not os.path.isdir(out_dir):
         os.mkdir(out_dir)
 
     alg_names = sorted(list(values.keys()))
-    log_distances =  open(os.path.join(out_dir,'log_distances'),'w')
+    log_distances =  open(os.path.join(out_dir,'log_distances'),'a')
 
     for alg1 in alg_names:
         #creates a set of plots where the histograms of the distances of 
@@ -86,7 +107,14 @@ def plot_histograms(values,out_dir='./'):
         quartiles_mean = []
         for alg2 in alg_names:
             if alg1 != alg2:
-                usrs_distances = np.array(get_distances(values,alg1, alg2))
+                #usrs_distances = np.array(get_distances(values,alg1, alg2))
+                usrs_distances = get_distances(values,alg1, alg2)
+                #verify if we need to plot for all users or for a specific set of users
+                if len(users_to_plot) == 0:
+                    usrs_distances = np.array(usrs_distances)
+                else:
+                    usrs_distances = np.array(usrs_distances.loc[users_to_plot])
+
                 val_bars,bins,patch = axxr[idx].hist(usrs_distances,
                                         bins=np.linspace(0,1,50),normed=True)
                 axxr[idx].set_title(alg2)                
@@ -112,6 +140,8 @@ def plot_histograms(values,out_dir='./'):
         plt.close()
 
 
+DIST_FUNCS = {'kendall':dist.kendall, 'spearman':dist.footrule}
+
 if __name__ == '__main__':
 
 
@@ -131,24 +161,14 @@ if __name__ == '__main__':
 
         print(algs_to_compare)
 
-        dist_values = dist.distance_matrix_users(algs,dist.kendall,algs_to_compare,1)
-        plot_histograms(dist_values,args.output)
+        dist_values = dist.distance_matrix_users(algs,DIST_FUNCS[args.dist_func],algs_to_compare,1)
+        plot_histograms(dist_values,out_dir=args.output)
 
 
-
-    
-
-
-'''    for i in range(len(alg_files)):
-        #for j in range(i+1,len(alg_files)):
-        for j in range(len(alg_files)):
-    
-            if i != j:
-                print(dist.get_name_from_path(alg_files[i]),"->",dist.get_name_from_path(alg_files[j]))
-                test = get_distances(dist_values,dist.get_name_from_path(alg_files[i]), dist.get_name_from_path(alg_files[j]))
-                f = plt.figure()
-                plt.hist(test,bins=np.linspace(0,1,50),normed=True)
-                plt.savefig(dist.get_name_from_path(alg_files[i])+dist.get_name_from_path(alg_files[j])+'.png')
-                plt.close()
-'''    
-
+        headers = ('user_id','item_id','rating')
+        datadir = "/".join(args.config.split('/')[:-1])+'/'
+        ratings = pd.read_csv(datadir+args.part+'.base',sep='\t',names=headers)
+        
+        user_quartiles = generate_users_quartiles(ratings)
+        for i,user_group in enumerate(user_quartiles):            
+            plot_histograms(dist_values,users_to_plot=user_group,out_dir=os.path.join(args.output,str(i)))

@@ -663,6 +663,8 @@ def datailed_dataset_stats(ratings):
 
     uniq_users = ratings.user_id.unique()
     num_ratings_per_user = [len(ratings[ratings.user_id == x]) for x in uniq_users]
+    stats['quartiles_user'] = [np.percentile(num_ratings_per_user,x) for x in [25,50,75]]
+    stats['std_ratings_per_user'] = np.std(num_ratings_per_user)
     stats['avg_ratings_per_user'] = np.mean(num_ratings_per_user)
     stats['min_ratings_per_user'] = np.min(num_ratings_per_user)
     stats['max_ratings_per_user'] = np.max(num_ratings_per_user)
@@ -670,6 +672,8 @@ def datailed_dataset_stats(ratings):
     uniq_items = ratings.item_id.unique()
     num_ratings_per_item = [len(ratings[ratings.item_id == x]) for x in uniq_items]
 
+    stats['quartiles_item'] = [np.percentile(num_ratings_per_item,x) for x in [25,50,75]]
+    stats['std_ratings_per_item'] = np.std(num_ratings_per_item)
     stats['avg_ratings_per_item'] = np.mean(num_ratings_per_item)
     stats['min_ratings_per_item'] = np.min(num_ratings_per_item)
     stats['max_ratings_per_item'] = np.max(num_ratings_per_item)
