@@ -425,7 +425,7 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
     
     uniq_users = ratings.user_id.unique()
     if not kwargs['silent']:
-        process_stats.append(datailed_dataset_stats(ratings))
+        process_stats.append(detailed_dataset_stats(ratings))
     else:
         stats_file.write('Num initial users: %d\n' %(len(uniq_users)))
         stats_file.write('Num initial items: %d\n' %(len(ratings.item_id.unique())))
@@ -444,7 +444,7 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
     #ratings = ratings[ratings['rating'] >= min_rating]
     print("After removal of ratings under {1}: {0}".format(len(ratings),
                                                            min_rating))
-    process_stats.append(datailed_dataset_stats(ratings))
+    process_stats.append(detailed_dataset_stats(ratings))
     print_dataset_stats(ratings)
 
     users_countings.append([len(ratings[ratings.user_id == x]) for x in uniq_users])
@@ -478,7 +478,7 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
     print("After removal of non-frequent items: {0}".format(len(ratings)))
     if not kwargs['silent']:
         print_dataset_stats(ratings)
-        process_stats.append(datailed_dataset_stats(ratings))
+        process_stats.append(detailed_dataset_stats(ratings))
 
     user_counts = user_count_dict(ratings)
 
@@ -487,7 +487,7 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
     ratings = ratings[ratings['user_id'].apply(get_user_count) >= min_cnt]
     print("After removal of users with few ratings: {0}".format(len(ratings)))
     print_dataset_stats(ratings)
-    process_stats.append(datailed_dataset_stats(ratings))
+    process_stats.append(detailed_dataset_stats(ratings))
 
     users_countings.append([len(ratings[ratings.user_id == x]) for x in uniq_users])
     
@@ -651,7 +651,7 @@ def save_folds(folds, dir_path, validation,use_enum=False,seed_number=0):
                               fold.test)
 
 
-def datailed_dataset_stats(ratings):
+def detailed_dataset_stats(ratings):
     """Returns the number of users, items and the sparsity of the dataset."""
     
     stats = {}
