@@ -107,6 +107,8 @@ def parse_args():
     p.add_argument("-s", "--puresvd", type=str,
         default="recommenders/bayesiandiversity/recommender.py")
     p.add_argument("-n", "--num_processes", type=int, default=1)
+    p.add_argument("--Xmx", type=int, default=5,
+                help="Size of the maximum heap used by the jvm when running librec")
     p.add_argument("-w", "--overwrite", action="store_true",
             help="if specified, any previous results are generated once again, "
             "instead of being kept whenever possible.")
@@ -315,7 +317,7 @@ def librec_make_config(alg, kwargs, cfg_path, out_path):
         for line in [base_in, test_in, output_setup, ranking_setup]:
             out.write(line + "\n")
 
-librec_cmd = "java -jar {librec_binary} -c {librec_cfg}"
+librec_cmd = "java -Xmx{Xmx}g -jar {librec_binary} -c {librec_cfg}"
 
 def librec_convert_output(from_path, to_path):
 
@@ -360,6 +362,8 @@ def librec_run(alg, kwargs):
 
     out_file = "{0}-top-{1}-items.txt".format(alg, kwargs['num_items'])
     out_path = os.path.join(run_dir, out_file)
+
+    print(librec_cmd.format(librec_cfg=cfg_path, **kwargs))
 
     os.system(librec_cmd.format(librec_cfg=cfg_path, **kwargs))
     print("File to write -----> "+out_file)
@@ -427,6 +431,7 @@ def arg_set_for_run(p, alg, args, conf):
         'test': hits_str,
         'alg': alg,
         'p': p,
+        'Xmx' : args.Xmx,
         'data_folder' : data_folder, #SAMUEL
         'pred': out_str,
         'num_items': num_items,
