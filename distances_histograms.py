@@ -56,9 +56,9 @@ def parse_args():
                         help="output dir to plot the histograms)")
     parser.add_argument("-p","--part", default="u1",
                         help="Partition to compute the distances")
-    #parser.add_argument("-p", "--processes", type=int, default=1,
-    #                    help="number of processes for parallel execution. "
-    #                    "(default: %(default)s)")
+    parser.add_argument("-n", "--num_processes", type=int, default=1,
+                        help="number of processes for parallel execution. "
+                        "(default: %(default)s)")
     parser.add_argument("-l", "--length", type=int, default=20,
                         help="length of the rankings to be considered")
     
@@ -100,7 +100,18 @@ def plot_histograms(values,users_to_plot=[],out_dir='./'):
         #creates a set of plots where the histograms of the distances of 
         #each algortihm will be ploted
         log_distances.write(alg1+'\n')
-        f, axxr = plt.subplots(len(alg_names)-1, sharey=True)
+
+        if len(alg_names) > 0:
+            if len(alg_names) == 1:
+                break
+            elif len(alg_names) == 2:
+                #ensures the the axes can be acessed even when there is 
+                f, axxr = plt.subplots(len(alg_names)-1, sharey=True)
+                axxr = [axxr]
+            else:
+                f, axxr = plt.subplots(len(alg_names)-1, sharey=True)
+
+
         f.set_figheight(10)
         idx = 0
         ymax_value = 0
@@ -161,7 +172,7 @@ if __name__ == '__main__':
 
         print(algs_to_compare)
 
-        dist_values = dist.distance_matrix_users(algs,DIST_FUNCS[args.dist_func],algs_to_compare,1)
+        dist_values = dist.distance_matrix_users(algs,DIST_FUNCS[args.dist_func],algs_to_compare,args.num_processes)
         plot_histograms(dist_values,out_dir=args.output)
 
 
