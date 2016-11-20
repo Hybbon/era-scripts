@@ -69,6 +69,9 @@ import pandas as pd
 import re
 from operator import itemgetter
 import multiprocessing as mp
+from multiprocessing import Process
+from multiprocessing import Queue
+import logging
 import time
 import glob
 
@@ -466,31 +469,84 @@ non_mml_algs = {
 }
 
 
-def run(arg_set):
-    alg = arg_set['alg']
-    p = arg_set['p']
-    start_time = time.time()
-    print("Begin execution of {p}-{alg}".format(p=p, alg=alg))
-    if alg in non_mml_algs:
-        non_mml_algs[alg](arg_set)
-    else:
-        mml_run(arg_set)
-    duration = time.time() - start_time
-    hours, rem = divmod(duration, 3600)
-    minutes, seconds = divmod(duration, 60)
-    delta = "{h}h{m}m{s}s".format(h=hours, m=minutes, s=seconds)
-    print("Finish execution of {p}-{alg} em {delta}".format(p=p, alg=alg, delta=delta))
+
+
+def run(Q):
+#def run(arg_set):
+    print(Q)
+    print(Q.qsize())
+
+    while not Q.empty():
+        
+        arg_set = Q.get()
+                
+
+        alg = arg_set['alg']
+        p = arg_set['p']
+        start_time = time.time()
+        logging.warning("Begin execution of {p}-{alg}".format(p=p, alg=alg))        
+        print("Begin execution of {p}-{alg}".format(p=p, alg=alg))
+        try:
+            if alg in non_mml_algs:
+                non_mml_algs[alg](arg_set)
+            else:
+                mml_run(arg_set)
+        except Exception as inst:
+            logging.error("Error when running "+alg +"- "+p)
+            err_time = time.time() - start_time
+            hours, rem = divmod(err_time, 3600)
+            minutes, seconds = divmod(err_time, 60)
+            delta = "{h}h{m}m{s}s".format(h=hours, m=minutes, s=seconds)
+
+            logging.error("{p}-{alg} - Total time until error {delta}".format(
+                        p=p,alg=alg,delta=delta))
+            logging.error("{p} - {alg} ".format(p=p,alg=alg) + str(inst))
+            logging.error("{p} - {alg} ".format(p=p,alg=alg) + str(type(inst)))
+            
+            print("Error when running "+alg +"- "+p)
+            print(inst)        
+            print(type(inst))
+            logging.warning("Try to continue tread with the next job in the queue")
+            continue
+        
+        duration = time.time() - start_time
+        hours, rem = divmod(duration, 3600)
+        minutes, seconds = divmod(duration, 60)
+        delta = "{h}h{m}m{s}s".format(h=hours, m=minutes, s=seconds)
+        logging.warning("Finish execution of {p}-{alg} em {delta}".format(p=p, alg=alg, delta=delta))
+        print("Finish execution of {p}-{alg} em {delta}".format(p=p, alg=alg, delta=delta))
+            
 
 
 def main():
     args = parse_args()
 
-    print("PY2: "+args.python2)
+
+    log_filename = args.config.replace('json','log')
+    log_path = os.path.join(args.output_dir,log_filename)
+
+    logging.basicConfig(filename=log_path, level=logging.INFO,
+                    format='[%(levelname)s] - %(asctime)s: %(message)s')
+
+
+
     conf = stats.aux.load_configs(stats.aux.CONF_DEFAULT,
                             os.path.join(args.data, stats.aux.BASE_CONF),
                             args.config)
+
+
+
+    logging.info("*******************STARTING*********************")
+
+    logging.info("Running for the following recommenders: " + 
+            ",".join(conf['algs']))
+
+    logging.info("Running using %d processes" %(args.num_processes))
+    
     base_conf = conf['base']
 
+
+    Q = Queue()
     parallel_arg_sets = []
     for alg in conf['algs']:
         print(alg + " pre-processing")
@@ -498,14 +554,40 @@ def main():
         for p in conf['parts']:
             arg_set = arg_set_for_run(p, alg, args, base_conf)
             if args.overwrite or not os.path.isfile(arg_set['pred']):
+                Q.put(arg_set)
                 parallel_arg_sets.append(arg_set)
+                logging.info("%s - %s added to processing queue" %(p,alg))
                 print(p + " added to processing queue")
             else:
-                print(p + "-" + alg + " has already been processed")
+                print(p + "-" + alg + " has already been processed")        
 
 
-    pool = mp.Pool(processes=args.num_processes)
-    pool.map(run, parallel_arg_sets)
+    
+
+    consumers = []
+    for i in range(args.num_processes):
+        try:
+            p = Process(target=run,args=(Q,))
+            consumers.append(p)
+            p.start()
+        except Exception as e:
+            print("Exception in the main")
+            print(e)
+
+
+    for pp in consumers:
+        try:
+            #print("waiting to join")
+            print(pp)
+            pp.join()
+        except Exception as e:
+            print("Exception waiting join")
+            print(e)
+
+
+
+    # = mp.Pool(processes=args.num_processes)
+    #pool.map(run, parallel_arg_sets)
 
 if __name__ == "__main__":
     main()
