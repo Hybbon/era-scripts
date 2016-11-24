@@ -18,7 +18,7 @@ import multiprocessing as mp
 import stats.metrics
 import distances as dist
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from stats.file_input import rankings_dict
 import stats.aux
@@ -28,11 +28,8 @@ import stats.aux
 
 '''
 Groups the users using the quartiles computed for the number of ratings.
-
-
 '''
 def generate_users_quartiles(ratings):
-
     #count the number of ratings of each user and computes the quartiles
     user_counts = ratings.user_id.value_counts()
     quartiles = [np.percentile(user_counts,x) for x in [25,50,75]]
@@ -153,13 +150,11 @@ def plot_histograms(values,users_to_plot=[],out_dir='./'):
 
 DIST_FUNCS = {'kendall':dist.kendall, 'spearman':dist.footrule}
 
-if __name__ == '__main__':
 
 
-    args = parse_args()
+def grouped_histograms():
+
     configs = stats.aux.load_configs(args.config)
-
-
     #alg_files = sorted(glob.glob('../../../datasets/ml-100k/u1*.out'))
     algs = dist.load_algs(args.files,args.length)
     for group in configs['alg_groups'].keys():
@@ -183,3 +178,51 @@ if __name__ == '__main__':
         user_quartiles = generate_users_quartiles(ratings)
         for i,user_group in enumerate(user_quartiles):            
             plot_histograms(dist_values,users_to_plot=user_group,out_dir=os.path.join(args.output,str(i)))
+
+
+
+if __name__ == '__main__':
+
+
+    args = parse_args()
+    #configs = stats.aux.load_configs(args.config)
+    
+    basedir = os.path.dirname(args.files[0])
+    headers = ('user_id','item_id','rating')
+    ratings = pd.read_csv(os.path.join(basedir,'u1.base'),sep='\t',names=headers)        
+    user_quartiles = generate_users_quartiles(ratings)
+
+    for length in [10,20,30,40,50,60,70,80]:
+        algs = dist.load_algs(args.files,length)    
+        distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
+        alg_names = sorted([os.path.basename(path) for path in algs.keys()])
+        alg_means = {name:[] for name in alg_names}
+        #y = distance_matrix.flatten().tolist()
+        y = [distance_matrix[i].mean() for i in range(len(distance_matrix))]        
+        colors = np.linspace(0,1,len(y))
+        x = [length for _ in range(len(y))]
+        plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)
+
+    plt.savefig('scatter_allusers.png')
+    plt.close()
+
+    for length in [10,20,30,40,50,60,70,80]:
+        algs = dist.load_algs(args.files,length)    
+        distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2,users_to_use=user_quartiles[3])
+        alg_names = sorted([os.path.basename(path) for path in algs.keys()])
+        alg_means = {name:[] for name in alg_names}
+        #y = distance_matrix.flatten().tolist()
+        y = [distance_matrix[i].mean() for i in range(len(distance_matrix))]        
+        colors = np.linspace(0,1,len(y))
+        x = [length for _ in range(len(y))]
+        plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)
+
+    plt.savefig('scatter_lastquartile.png')
+
+
+
+    #plt.show()
+
+    
+
+    
