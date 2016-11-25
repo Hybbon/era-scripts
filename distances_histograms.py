@@ -181,6 +181,35 @@ def grouped_histograms():
 
 
 
+
+
+def plot_heatmap(values,alg_names,filename,out_dir='./'):
+
+    fig, ax = plt.subplots()
+    heatmap = ax.pcolor(values, cmap=plt.cm.Blues, alpha=0.8)
+
+    # Format
+    fig = plt.gcf()
+    fig.set_size_inches(13, 13)
+
+
+    ax.set_yticks(np.arange(values.shape[0]) + 0.5, minor=False)
+    ax.set_xticks(np.arange(values.shape[1]) + 0.5, minor=False)
+
+    ax.invert_yaxis()
+    ax.xaxis.tick_top()
+    # turn off the frame
+    ax.set_frame_on(False)
+
+    ax.set_xticklabels(alg_names, minor=False)
+    ax.set_yticklabels(alg_names, minor=False)
+    plt.xticks(rotation=90)
+
+    plt.savefig(os.path.join(out_dir,filename))
+    plt.close()
+
+
+
 if __name__ == '__main__':
 
 
@@ -203,7 +232,7 @@ if __name__ == '__main__':
     alg_means = {name:[] for name in alg_names}
     
 
-    for length in lengths:
+    '''for length in lengths:
         algs = dist.load_algs(args.files,length)    
         distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
         #alg_names = sorted([os.path.basename(path) for path in algs.keys()])
@@ -275,15 +304,34 @@ if __name__ == '__main__':
             out_f.write(alg+',' + ','.join([str(x) for x in alg_means[alg]]) + ',')
             out_f.write(','.join([str(x) for x in alg_means_quartiles[alg]]) + '\n')
                 
-
+    '''
     #plt.show()
 
-    '''algs = dist.load_algs(args.files,10)    
+    alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
+
+    algs = dist.load_algs(args.files,10)    
     distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
-    colors_aux = np.linspace(0,1,len(distance_matrix))
+      
+
+    aux_mean = [(i,sum(distance_matrix[i]) / (len(distance_matrix[i]))) 
+            for i in range(len(distance_matrix))]
+    
+    aux_mean.sort(key = lambda tup : tup[1])
+
+    dist_sorted = np.array([distance_matrix[i] for i,val in aux_mean])
+    permutation = [i for i,val in aux_mean]
+    alg_names_sorted = [alg_names[i] for i,val in aux_mean]
 
 
-    for i,line in enumerate(distance_matrix):
+    dist_sorted = dist_sorted[:,permutation]
+
+
+
+    plot_heatmap(distance_matrix,alg_names,'heatmap.pdf',out_dir=out_dir)
+    plot_heatmap(dist_sorted,alg_names_sorted,'sorted_heatmap.pdf',out_dir=out_dir)
+
+
+    '''for i,line in enumerate(distance_matrix):
         
         x = [i for _ in range(len(line))]
         colors = [colors_aux[i] for _ in range(len(x))]
@@ -291,4 +339,8 @@ if __name__ == '__main__':
 
     plt.savefig(os.path.join(out_dir,'scatter_all_recommenders.png'))
     plt.close()'''
+
+
+
+
 
