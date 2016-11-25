@@ -188,39 +188,90 @@ if __name__ == '__main__':
     #configs = stats.aux.load_configs(args.config)
     
     basedir = os.path.dirname(args.files[0])
+
+    out_dir = os.path.join(basedir,'rank_distances')
+    if not os.path.isdir(out_dir):
+        os.mkdir(out_dir)
+
+
     headers = ('user_id','item_id','rating')
     ratings = pd.read_csv(os.path.join(basedir,'u1.base'),sep='\t',names=headers)        
     user_quartiles = generate_users_quartiles(ratings)
+    lengths = [10,20,30,40]
 
-    for length in [10,20,30,40,50,60,70,80]:
+    alg_names = sorted([os.path.basename(path) for path in args.files])
+    alg_means = {name:[] for name in alg_names}
+    
+
+    for length in lengths:
         algs = dist.load_algs(args.files,length)    
         distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
-        alg_names = sorted([os.path.basename(path) for path in algs.keys()])
-        alg_means = {name:[] for name in alg_names}
-        #y = distance_matrix.flatten().tolist()
-        y = [distance_matrix[i].mean() for i in range(len(distance_matrix))]        
-        colors = np.linspace(0,1,len(y))
+        #alg_names = sorted([os.path.basename(path) for path in algs.keys()])
+        #alg_means = {name:[] for name in alg_names}
+        y = distance_matrix.flatten().tolist()        
+        aux_mean = [distance_matrix[i].mean() for i in range(len(distance_matrix))]
+        for pos,name in enumerate(alg_names):
+            alg_means[name].append(aux_mean[pos])
+        #colors = np.linspace(0,1,len(y))
         x = [length for _ in range(len(y))]
-        plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)
+        plt.scatter(x,y)
 
-    plt.savefig('scatter_allusers.png')
+    plt.savefig(os.path.join(out_dir,'scatter_allusers.png'))
     plt.close()
 
-    for length in [10,20,30,40,50,60,70,80]:
+
+    for i,length in enumerate(lengths):
+        y = [alg_means[alg_name][i] for alg_name in alg_names]
+        colors = np.linspace(0,1,len(y))
+        x = [length for _ in range(len(y))]
+        plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)
+
+    plt.savefig(os.path.join(out_dir,'scatter_allusers_means.png'))
+    plt.close()
+
+
+    alg_means_quartiles = {name:[] for name in alg_names}
+
+
+    for length in lengths:
         algs = dist.load_algs(args.files,length)    
         distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2,users_to_use=user_quartiles[3])
-        alg_names = sorted([os.path.basename(path) for path in algs.keys()])
+
+        y = distance_matrix.flatten().tolist()        
+        aux_mean = [distance_matrix[i].mean() for i in range(len(distance_matrix))]
+        for pos,name in enumerate(alg_names):
+            alg_means_quartiles[name].append(aux_mean[pos])
+        #colors = np.linspace(0,1,len(y))
+        x = [length for _ in range(len(y))]
+        plt.scatter(x,y)
+
+        '''alg_names = sorted([os.path.basename(path) for path in algs.keys()])
         alg_means = {name:[] for name in alg_names}
         #y = distance_matrix.flatten().tolist()
         y = [distance_matrix[i].mean() for i in range(len(distance_matrix))]        
         colors = np.linspace(0,1,len(y))
         x = [length for _ in range(len(y))]
+        plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)'''
+
+    plt.savefig(os.path.join(out_dir,'scatter_lastquartile.png'))
+    plt.close()
+
+    for i,length in enumerate(lengths):
+        y = [alg_means_quartiles[alg_name][i] for alg_name in alg_names]
+        colors = np.linspace(0,1,len(y))
+        x = [length for _ in range(len(y))]
         plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)
 
-    plt.savefig('scatter_lastquartile.png')
+    plt.savefig(os.path.join(out_dir,'scatter_lastquartile_means.png'))
+    plt.close()
 
 
 
+    with open(os.path.join(out_dir,'alg_means.log'),'w') as out_f:
+        for alg in alg_names:
+            out_f.write(alg+',' + ','.join([str(x) for x in alg_means[alg]]) + ',')
+            out_f.write(','.join([str(x) for x in alg_means_quartiles[alg]]) + '\n')
+            
     #plt.show()
 
     
