@@ -18,7 +18,7 @@ import multiprocessing as mp
 import stats.metrics
 import distances as dist
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from stats.file_input import rankings_dict
 import stats.aux
