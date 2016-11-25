@@ -74,6 +74,11 @@ from multiprocessing import Queue
 import logging
 import time
 import glob
+import tempfile
+import numpy as np
+import heapq
+
+from sklearn.model_selection import train_test_split
 
 
 def parse_args():
@@ -103,9 +108,13 @@ def parse_args():
         default="recommenders/librec/", help="path to"
         " LibRec's directory, relative to"
         " the program's run path. (default: %(default)s)")
-    p.add_argument("-p", "--python2", type=str, 
-        default=os.path.join(glob.glob(os.environ['HOME']+'/anaconda*')[0], 'bin/python2'), #SAMUEL
-        help="absolute path to the Python 2 binaries. Required"
+    try:
+        py2_default = os.path.join(glob.glob(os.environ['HOME']+'/anaconda*')[0], 'bin/python2')
+    except:
+        py2_default = "python2"
+
+    p.add_argument("-p", "--python2", type=str,
+        default=py2_default, help="absolute path to the Python 2 binaries. Required"
         " packages: numpy, scipy, cython, sparsesvd.")
     p.add_argument("-s", "--puresvd", type=str,
         default="recommenders/bayesiandiversity/recommender.py")
@@ -118,7 +127,8 @@ def parse_args():
     p.add_argument("--cofactor", type=str,
         default="recommenders/cofactor/run_cofactor.py")
     p.add_argument("--libfm", type=str,
-        default="recommenders/libfm/libfm_ranking.py")  
+        default="recommenders/libfm/libfm_ranking.py")
+    p.add_argument("--poisson", default="recommenders/poisson/hgaprec")
 
     return p.parse_args()
 
@@ -216,13 +226,26 @@ def libfm_run(kwargs):
     os.system(command)
 
 
+def mml_to_frame(addr):
+    input_headers = ("user_id", "item_id", "rating")
+    return pd.read_csv(addr, "\t", names=input_headers)
+
+
+def ranking_frame_to_mml(frame, out_addr):
+    with open(out_addr, "w") as out_file:
+        for uid, user_frame in frame.groupby("user_id"):
+            items_and_scores = []
+            for row_id, row in user_frame.iterrows():
+                s = "{0}:{1}".format(int(row.item_id), row.rating)
+                items_and_scores.append(s)
+            print("{}\t[{}]".format(uid, ",".join(items_and_scores)),
+                  file=out_file)
 
 
 # COFIRANK STUFF
 
 def cr_convert_ratings(in_addr, out_addr, uids=[]):
-    input_headers = ("user_id", "item_id", "rating")
-    frame = pd.read_csv(in_addr, "\t", names=input_headers)
+    frame = mml_to_frame(in_addr)
     if len(uids):
         frame = frame[frame['user_id'].isin(uids)]
     else:
@@ -327,17 +350,17 @@ def librec_convert_output(from_path, to_path):
     line_regex = re.compile(r"(\d+): (.*)")
     item_regex = re.compile(r"(\d+)\*?, ({0})".format(float_regex))
 
-    #SAMUEL - Algumas vezes nome do arquivo de saida eh diferente do nome do 
-    #algoritmo (Ex.: FISM -> FISMauc) o try catch abaixo tem como objetivo 
+    #SAMUEL - Algumas vezes nome do arquivo de saida eh diferente do nome do
+    #algoritmo (Ex.: FISM -> FISMauc) o try catch abaixo tem como objetivo
     #resolver este problema
-        
+
     in_file = None
 
     try:
         in_file = open(from_path)
-    except:        
+    except:
         out_dir = os.path.join(*from_path.split("/")[:-1])
-        #pega o caminha do arquivo que realmente tem a saida 
+        #pega o caminha do arquivo que realmente tem a saida
         actual_file = glob.glob(os.path.join(out_dir,'*items*'))[-1]
         in_file = open(actual_file)
 
@@ -380,6 +403,106 @@ def librec_closure(alg):
     return func
 
 
+# POISSON STUFF
+
+def load_hga_matrix(path):
+    rows = []
+    uids = []
+    with open(path) as f:
+        for line in f:
+            i, uid, *row = line[:-1].split()
+            uids.append(int(uid))
+            rows.append([float(s) for s in row])
+    return uids, np.array(rows)
+
+
+def subdirectories(dir):
+    subdirs = []
+    for item in os.listdir(dir):
+        path = os.path.join(dir, item)
+        if os.path.isdir(path):
+            subdirs.append(path)
+    return subdirs
+
+
+def save_poisson_files(dir, train_frame, valid_frame, test_frame):
+    for frame, filename in ((train_frame, 'train.tsv'),
+                            (valid_frame, 'validation.tsv'),
+                            (test_frame, 'test.tsv')):
+        frame = frame[['user_id', 'item_id']]
+        frame = frame.drop_duplicates()
+        frame = frame.sort_values(['user_id', 'item_id'])
+        frame['rating'] = [1] * len(frame)
+        # frame['timestamp'] = [1241459650] * len(frame)
+        frame['timestamp'] = range(1241459650, 1241459650 - len(frame), -1)
+
+        path = os.path.join(dir, filename)
+        frame.to_csv(path, sep='\t', header=None, index=None)
+    test_users_path = os.path.join(dir, "test_users.tsv")
+    test_users = pd.Series(sorted(test_frame.user_id.unique()))
+    test_users.to_csv(test_users_path, index=False)
+    print(len(test_users))
+
+
+def compute_rating_matrix(dir):
+    iids, beta = load_hga_matrix(os.path.join(dir, "beta.tsv"))
+    uids, theta = load_hga_matrix(os.path.join(dir, "theta.tsv"))
+    ratings = beta @ theta.T
+    return iids, uids, ratings
+
+
+def build_ranking_frame(dir, train_frame, valid_frame, n=100):
+    iids, uids, ratings = compute_rating_matrix(dir)
+    tuples = []
+    for uid, user_ratings in zip(uids, ratings.T):
+        def seen(frame):
+            return set(frame[frame.user_id == uid].item_id)
+        seen_items = seen(train_frame) | seen(valid_frame)
+
+        unseen = [(rating, iid)
+                  for (rating, iid) in zip(user_ratings, iids)
+                  if iid not in seen_items]
+        for rating, iid in heapq.nlargest(n, unseen):
+            tuples.append((uid, iid, rating))
+    columns = ("user_id", "item_id", "rating")
+    frame = pd.DataFrame.from_records(tuples, columns=columns)
+    return frame
+
+
+poisson_cmd = "{poisson_binary} -n {users} -m {items} -dir {poisson_dir} -k {poisson_factors}"
+
+def poisson_run(kwargs):
+    with tempfile.TemporaryDirectory() as run_dir:
+        train_file, test_file = kwargs['base'], kwargs['test']
+        # the train file is split between train and validation
+        train_valid_frame = mml_to_frame(train_file)
+        # train: 75%, valid: 25%
+        # (of the original 80% of the training fold, so 60% and 20%)
+        train_frame, valid_frame = train_test_split(train_valid_frame)
+        test_frame = mml_to_frame(test_file)
+
+        save_poisson_files(run_dir, train_frame, valid_frame, test_frame)
+        kwargs = kwargs.copy()
+        kwargs['users'] = test_frame.user_id.max() + 1
+        kwargs['items'] = test_frame.item_id.max() + 1
+        kwargs['poisson_dir'] = run_dir
+        kwargs['poisson_factors'] = 5
+        prev_cwd = os.getcwd()
+        # Change directory to the temporary directory, so that hgaprec
+        # creates the result directory inside it.
+        os.chdir(run_dir)
+        cmd = poisson_cmd.format(**kwargs)
+        print(">>", cmd)
+        print("at", os.getcwd())
+        os.system(cmd)
+        # Return to the previous current working directory
+        os.chdir(prev_cwd)
+        subdirs = subdirectories(run_dir)
+        out_dir = subdirs[0]
+        ranking_frame = build_ranking_frame(out_dir, train_frame, test_frame)
+        ranking_frame_to_mml(ranking_frame, kwargs['pred'])
+
+
 def arg_set_for_run(p, alg, args, conf):
     base_filename = conf['base_form'].format(p)
     hits_filename = conf['hits_form'].format(p)
@@ -410,11 +533,13 @@ def arg_set_for_run(p, alg, args, conf):
     puresvd_script_str = args.puresvd
     cofactor_script_str = args.cofactor #SAMUEL
     libfm_script_str = args.libfm #SAMUEL
-    
+
     librec_binary_str = os.path.join(args.librec, "librec.jar")
     librec_template_dir_str = os.path.join(args.librec, "conf")
 
     data_folder = args.data #SAMUEL
+
+    poisson_binary_str = os.path.abspath(args.poisson)
 
     kwargs = {
         'python2': python2_binary_str,
@@ -439,7 +564,8 @@ def arg_set_for_run(p, alg, args, conf):
         'pred': out_str,
         'num_items': num_items,
         'seed': 123,
-        'results': results_str
+        'results': results_str,
+        "poisson_binary": poisson_binary_str
     }
 
     return kwargs
@@ -458,14 +584,14 @@ non_mml_algs = {
     "SLIM_librec" : librec_closure("SLIM"),
     "SVD++_librec" : librec_closure("SVD++"),
     "GBPR_librec" : librec_closure("GBPR"),
-    "LRMF_librec" : librec_closure("LRMF"),    
+    "LRMF_librec" : librec_closure("LRMF"),
     "BUCM_librec" : librec_closure("BUCM"),
     "Hybrid_librec" : librec_closure("Hybrid"),
     "PRankD_librec" : librec_closure("PRankD"),
     "FISM_librec" : librec_closure("FISM"),
     "CoFactor" : cofactor_run,
-    "libfm" :   libfm_run
-    
+    "libfm" :   libfm_run,
+    "Poisson": poisson_run
 }
 
 
@@ -477,14 +603,14 @@ def run(Q):
     print(Q.qsize())
 
     while not Q.empty():
-        
+
         arg_set = Q.get()
-                
+
 
         alg = arg_set['alg']
         p = arg_set['p']
         start_time = time.time()
-        logging.warning("Begin execution of {p}-{alg}".format(p=p, alg=alg))        
+        logging.warning("Begin execution of {p}-{alg}".format(p=p, alg=alg))
         print("Begin execution of {p}-{alg}".format(p=p, alg=alg))
         try:
             if alg in non_mml_algs:
@@ -502,20 +628,20 @@ def run(Q):
                         p=p,alg=alg,delta=delta))
             logging.error("{p} - {alg} ".format(p=p,alg=alg) + str(inst))
             logging.error("{p} - {alg} ".format(p=p,alg=alg) + str(type(inst)))
-            
+
             print("Error when running "+alg +"- "+p)
-            print(inst)        
+            print(inst)
             print(type(inst))
             logging.warning("Try to continue tread with the next job in the queue")
             continue
-        
+
         duration = time.time() - start_time
         hours, rem = divmod(duration, 3600)
         minutes, seconds = divmod(duration, 60)
         delta = "{h}h{m}m{s}s".format(h=hours, m=minutes, s=seconds)
         logging.warning("Finish execution of {p}-{alg} em {delta}".format(p=p, alg=alg, delta=delta))
         print("Finish execution of {p}-{alg} em {delta}".format(p=p, alg=alg, delta=delta))
-            
+
 
 
 def main():
@@ -538,11 +664,11 @@ def main():
 
     logging.info("*******************STARTING*********************")
 
-    logging.info("Running for the following recommenders: " + 
+    logging.info("Running for the following recommenders: " +
             ",".join(conf['algs']))
 
     logging.info("Running using %d processes" %(args.num_processes))
-    
+
     base_conf = conf['base']
 
 
@@ -559,10 +685,10 @@ def main():
                 logging.info("%s - %s added to processing queue" %(p,alg))
                 print(p + " added to processing queue")
             else:
-                print(p + "-" + alg + " has already been processed")        
+                print(p + "-" + alg + " has already been processed")
 
 
-    
+
 
     consumers = []
     for i in range(args.num_processes):
