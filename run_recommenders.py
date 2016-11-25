@@ -75,6 +75,8 @@ import logging
 import time
 import glob
 import tempfile
+import numpy as np
+import heapq
 
 from sklearn.model_selection import train_test_split
 
@@ -403,6 +405,26 @@ def librec_closure(alg):
 
 # POISSON STUFF
 
+def load_hga_matrix(path):
+    rows = []
+    uids = []
+    with open(path) as f:
+        for line in f:
+            i, uid, *row = line[:-1].split()
+            uids.append(int(uid))
+            rows.append([float(s) for s in row])
+    return uids, np.array(rows)
+
+
+def subdirectories(dir):
+    subdirs = []
+    for item in os.listdir(dir):
+        path = os.path.join(dir, item)
+        if os.path.isdir(path):
+            subdirs.append(path)
+    return subdirs
+
+
 def save_poisson_files(dir, train_frame, valid_frame, test_frame):
     for frame, filename in ((train_frame, 'train.tsv'),
                             (valid_frame, 'validation.tsv'),
@@ -422,20 +444,29 @@ def save_poisson_files(dir, train_frame, valid_frame, test_frame):
     print(len(test_users))
 
 
-def convert_poisson_results(dir, pred):
-    input_headers = ("user_id", "item_id", "rating", "hit")
-    results_addr = os.path.join(dir, "ranking.tsv")
-    results = pd.read_csv(results_addr, "\t", names=input_headers)
-    ranking_frame_to_mml(results, pred)
+def compute_rating_matrix(dir):
+    iids, beta = load_hga_matrix(os.path.join(dir, "beta.tsv"))
+    uids, theta = load_hga_matrix(os.path.join(dir, "theta.tsv"))
+    ratings = beta @ theta.T
+    return iids, uids, ratings
 
 
-def subdirectories(dir):
-    subdirs = []
-    for item in os.listdir(dir):
-        path = os.path.join(dir, item)
-        if os.path.isdir(path):
-            subdirs.append(path)
-    return subdirs
+def build_ranking_frame(dir, train_frame, valid_frame, n=100):
+    iids, uids, ratings = compute_rating_matrix(dir)
+    tuples = []
+    for uid, user_ratings in zip(uids, ratings.T):
+        def seen(frame):
+            return set(frame[frame.user_id == uid].item_id)
+        seen_items = seen(train_frame) | seen(valid_frame)
+
+        unseen = [(rating, iid)
+                  for (rating, iid) in zip(user_ratings, iids)
+                  if iid not in seen_items]
+        for rating, iid in heapq.nlargest(n, unseen):
+            tuples.append((uid, iid, rating))
+    columns = ("user_id", "item_id", "rating")
+    frame = pd.DataFrame.from_records(tuples, columns=columns)
+    return frame
 
 
 poisson_cmd = "{poisson_binary} -n {users} -m {items} -dir {poisson_dir} -k {poisson_factors}"
@@ -464,12 +495,12 @@ def poisson_run(kwargs):
         print(">>", cmd)
         print("at", os.getcwd())
         os.system(cmd)
-        # Return to the previous current working directory so Python
-        # won't flip the fuck out
+        # Return to the previous current working directory
         os.chdir(prev_cwd)
         subdirs = subdirectories(run_dir)
         out_dir = subdirs[0]
-        convert_poisson_results(out_dir, kwargs['pred'])
+        ranking_frame = build_ranking_frame(out_dir, train_frame, test_frame)
+        ranking_frame_to_mml(ranking_frame, kwargs['pred'])
 
 
 def arg_set_for_run(p, alg, args, conf):
@@ -572,14 +603,14 @@ def run(Q):
     print(Q.qsize())
 
     while not Q.empty():
-        
+
         arg_set = Q.get()
-                
+
 
         alg = arg_set['alg']
         p = arg_set['p']
         start_time = time.time()
-        logging.warning("Begin execution of {p}-{alg}".format(p=p, alg=alg))        
+        logging.warning("Begin execution of {p}-{alg}".format(p=p, alg=alg))
         print("Begin execution of {p}-{alg}".format(p=p, alg=alg))
         try:
             if alg in non_mml_algs:
@@ -597,20 +628,20 @@ def run(Q):
                         p=p,alg=alg,delta=delta))
             logging.error("{p} - {alg} ".format(p=p,alg=alg) + str(inst))
             logging.error("{p} - {alg} ".format(p=p,alg=alg) + str(type(inst)))
-            
+
             print("Error when running "+alg +"- "+p)
-            print(inst)        
+            print(inst)
             print(type(inst))
             logging.warning("Try to continue tread with the next job in the queue")
             continue
-        
+
         duration = time.time() - start_time
         hours, rem = divmod(duration, 3600)
         minutes, seconds = divmod(duration, 60)
         delta = "{h}h{m}m{s}s".format(h=hours, m=minutes, s=seconds)
         logging.warning("Finish execution of {p}-{alg} em {delta}".format(p=p, alg=alg, delta=delta))
         print("Finish execution of {p}-{alg} em {delta}".format(p=p, alg=alg, delta=delta))
-            
+
 
 
 def main():
@@ -633,11 +664,11 @@ def main():
 
     logging.info("*******************STARTING*********************")
 
-    logging.info("Running for the following recommenders: " + 
+    logging.info("Running for the following recommenders: " +
             ",".join(conf['algs']))
 
     logging.info("Running using %d processes" %(args.num_processes))
-    
+
     base_conf = conf['base']
 
 
@@ -654,10 +685,10 @@ def main():
                 logging.info("%s - %s added to processing queue" %(p,alg))
                 print(p + " added to processing queue")
             else:
-                print(p + "-" + alg + " has already been processed")        
+                print(p + "-" + alg + " has already been processed")
 
 
-    
+
 
     consumers = []
     for i in range(args.num_processes):
