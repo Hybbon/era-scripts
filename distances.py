@@ -42,7 +42,45 @@ from stats.file_input import rankings_dict
 logger = logging.getLogger()
 
 
-def distance_matrix(algs, function, num_processes):
+'''
+This function returns a dictionary of dataframes. Each dataframe represents 
+an algorithm and contains the distances, for each user, of the rankings 
+recommend by this algorithm to the rankings recommended by the other algorithms.
+
+
+The returned structure can be seen as an 3-dimensional triangular matrix. 
+Therefore, if for a pair of algorithms (A,B) the distances can be stored in 
+distances[A][B] or distances[B][A]
+'''
+def distance_matrix_users(algs, function,algs_to_compare = [], num_processes=1):
+    """Generates pairwise distance matrix according to a distance function"""
+    index_users = algs[list(algs.keys())[0]].keys()
+    distances = {}
+
+    if len(algs_to_compare) == 0:
+        algs_names = sorted(algs.keys())
+    else:
+        algs_names = sorted(algs_to_compare)
+
+    for i,alg1 in enumerate(algs_names):
+        #contructing the triangular matrix
+        distances[alg1] = pd.DataFrame(index=index_users,columns=algs_names[i+2:])
+        for j in range((i+1),len(algs_names)):
+            alg2 = algs_names[j]
+            logger.warn("Comparing {} to {} via {}".format(alg1, alg2,
+                                                           function.__name__))
+            rankings1, rankings2 = algs[alg1], algs[alg2]
+            user_rankings = [(rankings1[user], rankings2[user])
+                    for user in rankings1.keys() & rankings2.keys()]        
+            with mp.Pool(num_processes) as pool:
+                user_results = pool.map(function, user_rankings)
+
+            distances[alg1][alg2] = pd.Series(user_results, index = index_users)
+                 
+    return distances
+
+
+def distance_matrix(algs, function, num_processes,users_to_use=[]):
     """Generates pairwise distance matrix according to a distance function"""
     alg_index = {alg: i for i, alg in enumerate(sorted(algs.keys()))}
     distances = np.ndarray((len(algs), len(algs)), dtype=float)
@@ -51,8 +89,14 @@ def distance_matrix(algs, function, num_processes):
         logger.warn("Comparing {} to {} via {}".format(alg1, alg2,
                                                        function.__name__))
         rankings1, rankings2 = algs[alg1], algs[alg2]
-        user_rankings = [(rankings1[user], rankings2[user])
-                for user in rankings1.keys() & rankings2.keys()]
+        #checking if we will use the complete set of users of just a sub set of them
+        if len(users_to_use) == 0:
+            user_rankings = [(rankings1[user], rankings2[user])
+                    for user in rankings1.keys() & rankings2.keys()]
+        else:
+            user_rankings = [(rankings1[user], rankings2[user])
+                    for user in users_to_use]
+
         with mp.Pool(num_processes) as pool:
             user_results = pool.map(function, user_rankings)
         mean = sum(user_results) / len(user_results)
@@ -60,6 +104,9 @@ def distance_matrix(algs, function, num_processes):
 
     return distances
 
+
+def kendall_samuel(t):
+    return stats.metrics.kendall_samuel(*t,penalty=1)
 
 def kendall(t):
     return stats.metrics.kendall(*t)
@@ -69,18 +116,19 @@ def footrule(t):
 
 DISTANCE_FUNCTIONS = [
     kendall,
+    kendall_samuel,
     footrule
 ]
 
 
-def distances(algs, num_processes):
+def distances(algs, num_processes,users_to_use=[]):
     """Computes mean distances for an algorithm via defined functions"""
     logger.warn("Initiating distance frame calculations")
     means = pd.DataFrame()
 
     for f in DISTANCE_FUNCTIONS:
         logger.warn("Computing {} matrix".format(f.__name__))
-        m = distance_matrix(algs, f, num_processes)
+        m = distance_matrix(algs, f, num_processes,users_to_use)
         # The mean value is not computed directly because the matrix contains
         # the distance between an algorithm and itself. We must subtract 1 from
         # the number of algorithms.
@@ -95,9 +143,20 @@ def slice_rankings(d, length):
     return {user_id: items[:length] for user_id, items in d.items()}
 
 
+
+'''returns the algorithm name given its path
+'''
+def get_name_from_path(fstr):
+    #re_str = 'u[1-5]-[a-z A-Z]*\\.out'
+    #re_name = re.compile(re_str)
+    #alg_name = re_name.match(fstr).group(0)
+
+    return fstr.split('/')[-1]
+
+
 def load_algs(files, length):
     logger.warn("Loading files {}".format(files))
-    return {path: slice_rankings(rankings_dict(path), length)
+    return {get_name_from_path(path): slice_rankings(rankings_dict(path), length)
             for path in files}
 
 

@@ -3,10 +3,11 @@ Baseline: latent-factor model from
 Cremonesi, Koren, and Turrin (RecSys 2010)
 '''
 
+
+from sparsesvd import *#sparsesvd 
 import numpy
 import sys
 from scipy import sparse
-from sparsesvd import sparsesvd
 from predictor import Predictor
 from ranker import Ranker
 from evaluator import Evaluator

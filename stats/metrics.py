@@ -64,6 +64,50 @@ def _reverse_index(ranking):
     return {item: index for index, item in enumerate(ranking)}
 
 
+def kendall_samuel(a, b, penalty=0.5):
+    """Calculates Kendall's Tau distance between two rankings.
+
+    It is necessary and enforced that both rankings have the same
+    length.
+
+    a, b -- rankings to be compared."""
+    assert len(a) == len(b)
+    length = len(a)
+    pos_a, pos_b = _reverse_index(a), _reverse_index(b)
+    item_list = list(set(a) | set(b))
+    '''item_list = set(a)
+    item_list = item_list.union(set(b))
+    item_list = list(item_list)'''
+
+    inversion_count = 0
+
+    for i, x in enumerate(item_list):
+        for y in item_list[i + 1:]:
+            # First two ifs: if both items are present in a list but not in
+            # the other, a penalty p (0 < p <= 1) is added to the distance
+            if x not in pos_a and y not in pos_a:
+                if x in pos_b and y in pos_b:
+                    inversion_count += penalty
+                elif x in pos_b != y in pos_b:
+                    inversion_count += penalty
+
+            elif x not in pos_b and y not in pos_b:
+                if x in pos_a and y in pos_a:
+                    inversion_count += penalty
+                elif x in pos_a != y in pos_a:
+                    inversion_count += penalty
+            else:
+                a_greater = pos_a.get(x, length) > pos_a.get(y, length)
+                b_greater = pos_b.get(x, length) > pos_b.get(y, length)
+                inversion_count += a_greater != b_greater
+
+    num_items = len(item_list)
+
+    return inversion_count / (num_items * (num_items - 1) / 2)
+
+
+
+
 def kendall(a, b, penalty=0.5):
     """Calculates Kendall's Tau distance between two rankings.
 
@@ -116,6 +160,7 @@ def footrule(a, b):
     )
 
     # length: maximum distance for a given item
+
     return distance / (length * len(item_list))
 
 

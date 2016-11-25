@@ -1,4 +1,5 @@
-from pureSVD import PureSVDPredictor
+#from pureSVD import PureSVDPredictor
+import pureSVD
 from predictor import Predictor
 import argparse
 from operator import itemgetter
@@ -42,7 +43,7 @@ def main():
     training = Predictor(args.base, args.separator)
     users, items = training.store_data_relations()
 
-    recommender = PureSVDPredictor(items, users, args.factors)
+    recommender = pureSVD.PureSVDPredictor(items, users, args.factors)
 
     rankings = generate_rankings(recommender, users, items, args.num_items)
 
