@@ -469,17 +469,32 @@ def build_ranking_frame(dir, train_frame, valid_frame, n=100):
     return frame
 
 
+def poisson_split(kwargs):
+    train_file, test_file = kwargs['base'], kwargs['test']
+    train_valid_frame = mml_to_frame(train_file)
+
+    train_frame = pd.DataFrame()
+    valid_frame = pd.DataFrame()
+
+    for uid, user_frame in train_valid_frame.groupby('user_id'):
+        train_ratings, valid_ratings = train_test_split(user_frame)
+        train_frame = train_frame.append(train_ratings)
+        valid_frame = valid_frame.append(valid_ratings)
+
+    # Fix items being in validation but not in training
+    not_in_train = valid_frame.item_id.apply(lambda x: x in train_frame.item_id)
+    train_frame = train_frame.append(valid_frame[not_in_train])
+    valid_frame = valid_frame[~not_in_train]
+    test_frame = mml_to_frame(test_file)
+
+    return train_frame, valid_frame, test_frame
+
+
 poisson_cmd = "{poisson_binary} -n {users} -m {items} -dir {poisson_dir} -k {poisson_factors}"
 
 def poisson_run(kwargs):
     with tempfile.TemporaryDirectory() as run_dir:
-        train_file, test_file = kwargs['base'], kwargs['test']
-        # the train file is split between train and validation
-        train_valid_frame = mml_to_frame(train_file)
-        # train: 75%, valid: 25%
-        # (of the original 80% of the training fold, so 60% and 20%)
-        train_frame, valid_frame = train_test_split(train_valid_frame)
-        test_frame = mml_to_frame(test_file)
+        train_frame, valid_frame, test_frame = poisson_split(kwargs)
 
         save_poisson_files(run_dir, train_frame, valid_frame, test_frame)
         kwargs = kwargs.copy()
