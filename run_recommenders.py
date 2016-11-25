@@ -451,17 +451,14 @@ def compute_rating_matrix(dir):
     return iids, uids, ratings
 
 
-def build_ranking_frame(dir, train_frame, valid_frame, n=100):
+def build_ranking_frame(dir, seen_items, n=100):
     iids, uids, ratings = compute_rating_matrix(dir)
     tuples = []
     for uid, user_ratings in zip(uids, ratings.T):
-        def seen(frame):
-            return set(frame[frame.user_id == uid].item_id)
-        seen_items = seen(train_frame) | seen(valid_frame)
-
+        seen_by_user = seen_items.get(uid, set())
         unseen = [(rating, iid)
                   for (rating, iid) in zip(user_ratings, iids)
-                  if iid not in seen_items]
+                  if iid not in seen_by_user]
         for rating, iid in heapq.nlargest(n, unseen):
             tuples.append((uid, iid, rating))
     columns = ("user_id", "item_id", "rating")
@@ -490,18 +487,30 @@ def poisson_split(kwargs):
     return train_frame, valid_frame, test_frame
 
 
+def compute_seen_items(*frames):
+    seen_items = {}
+    for uid, user_frame in pd.concat(frames).groupby('user_id'):
+        seen_items[uid] = set(user_frame.item_id.unique())
+    return seen_items
+
+
 poisson_cmd = "{poisson_binary} -n {users} -m {items} -dir {poisson_dir} -k {poisson_factors}"
 
 def poisson_run(kwargs):
     with tempfile.TemporaryDirectory() as run_dir:
         train_frame, valid_frame, test_frame = poisson_split(kwargs)
-
+        seen_items = compute_seen_items(train_frame, valid_frame)
         save_poisson_files(run_dir, train_frame, valid_frame, test_frame)
         kwargs = kwargs.copy()
         kwargs['users'] = test_frame.user_id.max() + 1
         kwargs['items'] = test_frame.item_id.max() + 1
         kwargs['poisson_dir'] = run_dir
-        kwargs['poisson_factors'] = 5
+        kwargs['poisson_factors'] = 100
+
+        del train_frame
+        del valid_frame
+        del test_frame
+
         prev_cwd = os.getcwd()
         # Change directory to the temporary directory, so that hgaprec
         # creates the result directory inside it.
@@ -512,9 +521,10 @@ def poisson_run(kwargs):
         os.system(cmd)
         # Return to the previous current working directory
         os.chdir(prev_cwd)
+        print()
         subdirs = subdirectories(run_dir)
         out_dir = subdirs[0]
-        ranking_frame = build_ranking_frame(out_dir, train_frame, test_frame)
+        ranking_frame = build_ranking_frame(out_dir, seen_items)
         ranking_frame_to_mml(ranking_frame, kwargs['pred'])
 
 
