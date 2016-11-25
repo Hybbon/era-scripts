@@ -209,7 +209,8 @@ if __name__ == '__main__':
         #alg_names = sorted([os.path.basename(path) for path in algs.keys()])
         #alg_means = {name:[] for name in alg_names}
         y = distance_matrix.flatten().tolist()        
-        aux_mean = [distance_matrix[i].mean() for i in range(len(distance_matrix))]
+        aux_mean = [sum(distance_matrix[i]) / (len(distance_matrix[i])) 
+                    for i in range(len(distance_matrix))]
         for pos,name in enumerate(alg_names):
             alg_means[name].append(aux_mean[pos])
         #colors = np.linspace(0,1,len(y))
@@ -238,20 +239,22 @@ if __name__ == '__main__':
         distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2,users_to_use=user_quartiles[3])
 
         y = distance_matrix.flatten().tolist()        
-        aux_mean = [distance_matrix[i].mean() for i in range(len(distance_matrix))]
+        aux_mean = [sum(distance_matrix[i]) / (len(distance_matrix[i])) 
+            for i in range(len(distance_matrix))]
+
         for pos,name in enumerate(alg_names):
             alg_means_quartiles[name].append(aux_mean[pos])
         #colors = np.linspace(0,1,len(y))
         x = [length for _ in range(len(y))]
         plt.scatter(x,y)
 
-        '''alg_names = sorted([os.path.basename(path) for path in algs.keys()])
+        """alg_names = sorted([os.path.basename(path) for path in algs.keys()])
         alg_means = {name:[] for name in alg_names}
         #y = distance_matrix.flatten().tolist()
         y = [distance_matrix[i].mean() for i in range(len(distance_matrix))]        
         colors = np.linspace(0,1,len(y))
         x = [length for _ in range(len(y))]
-        plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)'''
+        plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)"""
 
     plt.savefig(os.path.join(out_dir,'scatter_lastquartile.png'))
     plt.close()
@@ -271,9 +274,21 @@ if __name__ == '__main__':
         for alg in alg_names:
             out_f.write(alg+',' + ','.join([str(x) for x in alg_means[alg]]) + ',')
             out_f.write(','.join([str(x) for x in alg_means_quartiles[alg]]) + '\n')
-            
+                
+
     #plt.show()
 
-    
+    '''algs = dist.load_algs(args.files,10)    
+    distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
+    colors_aux = np.linspace(0,1,len(distance_matrix))
 
-    
+
+    for i,line in enumerate(distance_matrix):
+        
+        x = [i for _ in range(len(line))]
+        colors = [colors_aux[i] for _ in range(len(x))]
+        plt.scatter(x,line,c=colors,cmap=plt.cm.RdYlGn)
+
+    plt.savefig(os.path.join(out_dir,'scatter_all_recommenders.png'))
+    plt.close()'''
+
