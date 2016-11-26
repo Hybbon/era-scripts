@@ -434,14 +434,13 @@ def save_poisson_files(dir, train_frame, valid_frame, test_frame):
         frame = frame.sort_values(['user_id', 'item_id'])
         frame['rating'] = [1] * len(frame)
         # frame['timestamp'] = [1241459650] * len(frame)
-        frame['timestamp'] = range(1241459650, 1241459650 - len(frame), -1)
+        # frame['timestamp'] = range(1241459650, 1241459650 - len(frame), -1)
 
         path = os.path.join(dir, filename)
         frame.to_csv(path, sep='\t', header=None, index=None)
     test_users_path = os.path.join(dir, "test_users.tsv")
     test_users = pd.Series(sorted(test_frame.user_id.unique()))
     test_users.to_csv(test_users_path, index=False)
-    print(len(test_users))
 
 
 def compute_rating_matrix(dir):
@@ -451,7 +450,7 @@ def compute_rating_matrix(dir):
     return iids, uids, ratings
 
 
-def build_ranking_frame(dir, seen_items, n=100):
+def build_ranking_frame(dir, seen_items, uid_map, iid_map, n=100):
     iids, uids, ratings = compute_rating_matrix(dir)
     tuples = []
     for uid, user_ratings in zip(uids, ratings.T):
@@ -463,6 +462,13 @@ def build_ranking_frame(dir, seen_items, n=100):
             tuples.append((uid, iid, rating))
     columns = ("user_id", "item_id", "rating")
     frame = pd.DataFrame.from_records(tuples, columns=columns)
+
+    rev_uid_map = {v: k for k, v in uid_map.items()}
+    rev_iid_map = {v: k for k, v in iid_map.items()}
+
+    frame.user_id = frame.user_id.apply(lambda uid: rev_uid_map[uid])
+    frame.item_id= frame.item_id.apply(lambda iid: rev_iid_map[iid])
+
     return frame
 
 
@@ -494,13 +500,32 @@ def compute_seen_items(*frames):
     return seen_items
 
 
+def remap_frames(*frames):
+    uids, iids = set(), set()
+    for frame in frames:
+        uids |= set(frame.user_id)
+        iids |= set(frame.item_id)
+
+    uid_map = dict(zip(uids, range(len(uids))))
+    iid_map = dict(zip(iids, range(len(iids))))
+
+    for frame in frames:
+        frame.user_id = frame.user_id.apply(lambda uid: uid_map[uid])
+        frame.item_id = frame.item_id.apply(lambda iid: iid_map[iid])
+
+    return (*frames, uid_map, iid_map)
+
+
 poisson_cmd = "{poisson_binary} -n {users} -m {items} -dir {poisson_dir} -k {poisson_factors}"
 
 def poisson_run(kwargs):
     with tempfile.TemporaryDirectory() as run_dir:
-        train_frame, valid_frame, test_frame = poisson_split(kwargs)
+        ret = remap_frames(*poisson_split(kwargs))
+        train_frame, valid_frame, test_frame, uid_map, iid_map = ret
+
         seen_items = compute_seen_items(train_frame, valid_frame)
         save_poisson_files(run_dir, train_frame, valid_frame, test_frame)
+
         kwargs = kwargs.copy()
         kwargs['users'] = test_frame.user_id.max() + 1
         kwargs['items'] = test_frame.item_id.max() + 1
@@ -524,7 +549,7 @@ def poisson_run(kwargs):
         print()
         subdirs = subdirectories(run_dir)
         out_dir = subdirs[0]
-        ranking_frame = build_ranking_frame(out_dir, seen_items)
+        ranking_frame = build_ranking_frame(out_dir, seen_items, uid_map, iid_map)
         ranking_frame_to_mml(ranking_frame, kwargs['pred'])
 
 
