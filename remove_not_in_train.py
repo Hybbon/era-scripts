@@ -31,7 +31,7 @@ def ensure_same_users_items(train_data,val_data,test_data):
 
     unique_items_train = set(train_data.item_id.unique())
 
-    if not val_data == None:
+    if  val_data is not None:
         print("item train {0} items val {1}".format(len(train_data.item_id.unique()),len(val_data.item_id.unique())))
                 
         #Change the files in a way that the training file contains all possible items
@@ -101,7 +101,7 @@ if __name__ == "__main__":
             print("Need to save the changes")
             train.to_csv(os.path.join(args.data,part+'.base'), header=False, index=False, sep="\t", columns=header)
             test.to_csv(os.path.join(args.data,part+'.test'), header=False, index=False, sep="\t", columns=header)    
-            if not validation == None:
+            if validation is not None:
                 validation.to_csv(os.path.join(args.data,part+'.validation'), header=False, index=False, sep="\t", columns=header)
 
 
