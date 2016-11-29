@@ -235,176 +235,76 @@ def personalized_rating_normalization(ratings,metric='median'):
     if metric == 'median':
         user_medians = ratings.groupby(['user_id'])['rating'].median()
         for user in uniq_users:
-            ratings.loc[(ratings.user_id == user) & (ratings.rating < user_medians[user]),'to_remove'] = 1
+            ratings.loc[(ratings.user_id == user) & ((ratings.rating < user_medians[user]) | (ratings.rating <= 0)),'to_remove'] = 1
         print('median time:' + str(time.time()-ini1))
         return ratings[ratings['to_remove'] != 1], ratings[ratings['to_remove'] == 1]
     elif 'fixed':
         print('fixed time' + str(time.time()-ini1))
         return ratings[ratings['rating'] >= 4], ratings
-
-        
-
-
-    '''medians = {}
-
-    for row in ratings.index:
-        usr = ratings.iloc[row].user_id
-        if usr in medians:
-            medians[usr].append(ratings.loc[row].rating)
-        else:
-            medians[usr] = [ratings.loc[row].rating]
-
-
-    for key in medians.keys():
-        medians[key] = np.median(medians[key])
-
-    #ratings.sort_values(by='user_id')
-    ini1 = time.time()
-    user_medians = ratings.groupby(['user_id'])['rating'].median()
-    print('1st' + str(time.time()-ini1))
-
-    ratings[ratings]
-
-    ini2 = time.time()
-    for row in ratings.index:
-        usr = int(ratings.iloc[row].user_id)
-        if ratings.loc[row].rating < medians[usr]:
-            ratings.loc[row,'to_remove'] = 1
-    
-
-    print('2st' + str(time.time()-ini2))'''
-
-
-    '''ini2 = time.time()
-    
-    for user in uniq_users:
-        if metric == 'median':
-            med_rating = ratings[ratings['user_id']==user]['rating'].median()
-        elif metric == 'mean':
-            med_rating = ratings[ratings['user_id']==user]['rating'].mean()
-        else:
-            med_rating = 4
-
-        ratings.loc[(ratings.user_id == user) & (ratings.rating < med_rating),'to_remove'] = 1
-        #to_replace = list(range(int(med_rating)))
-        #default_val = [-999 for _ in to_replace]
-        #ratings[ratings.user_id ==user]['rating'].replace(to_replace=to_replace,value=default_val,inplace=True)                
-        #primeiramente da um drop em todos os registros para o usuario 'usr'
-        #depois concatena com o bkp que foi armazenado na linha anterior
-        #ratings = pd.concat([ratings[ratings.user_id != user],bkp])
-    
-    print('2st' + str(time.time()-ini2))'''
-
-
-
-
-
-
-'''def personalized_rating_normalization2(ratings):
-
-    #1) sort the ratings dataframe
-     2) use ratings.iter_rows() to iterate in the dataframe
-
-
-    uniq_users = ratings.user_id.unique()
-
-    ratings['to_remove'] = pd.Series(np.zeros(len(ratings)),index=ratings.index)
-    ratings = ratings.sort(columns='user_id')
-
-    
-    for i in range(1,len(ratings)):
-        
-        tokens = ratings.irow(i)
-        if tokens.user_id == ratings.irow(i-1):
-            med_ratings += tokens.rating
-            num_user_ratings += 1
-        else:
-                
-
-    for user in uniq_users:
-        med_rating = ratings[ratings['user_id']==user]['rating'].median()        
-        ratings.loc[(ratings.user_id == user) & (ratings.rating < med_rating),'to_remove'] = 1
-        #to_replace = list(range(int(med_rating)))
-        #default_val = [-999 for _ in to_replace]
-        #ratings[ratings.user_id ==user]['rating'].replace(to_replace=to_replace,value=default_val,inplace=True)                
-        #primeiramente da um drop em todos os registros para o usuario 'usr'
-        #depois concatena com o bkp que foi armazenado na linha anterior
-        #ratings = pd.concat([ratings[ratings.user_id != user],bkp])
-  
-
-    return ratings[ratings['to_remove'] != 1], ratings[ratings['to_remove'] == 1]
-'''
-
-
-
-
-
-
-
-
-#SAMUEL
+       
 '''
 This funtion ensures that the same users and itens used in the train files 
-will be present in the validation (TODO check if it is necessary, or even possible
-to do the same thing with the test files)
-TODO check if I need to do the same thing for users
+will be present in the validation and test.
+The changes are not done inplace. The resultant dataframes are returned to the 
+caller, that is responsible to update the corresponding data
+
+Output: 
+train, validation and test dataframes
+boolean indicating if some modification was done in the DFs
+
 '''
-def ensure_same_users_items(train_data,val_data,test_data):
+def ensure_same_users_items2(train_data,val_data,test_data):
 
     ini = time.time()    
 
-    print("item train {0} items val {1}".format(len(train_data.item_id.unique()),len(val_data.item_id.unique())))
-    
     unique_items_train = set(train_data.item_id.unique())
-    '''unique_users = [val_data.user_id.unique(),test_data.user_id.unique()]'''
-    
-    #removing users that are not in all files
-    #TODO check if it is the best way to do this
-    #union_users = set(train_data.user_id.unique())
-    #TODO remove
-    '''intersection_users = set(train_data.user_id.unique())
-    for x in unique_users:
-        union_users = union_users.union(x)
-        intersection_users = intersection_users.intersection(x)
-    '''
 
-    '''users_not_in_all = union_users - intersection_users
+    if  val_data is not None:
+        print("item train {0} items val {1}".format(len(train_data.item_id.unique()),len(val_data.item_id.unique())))
+                
+        #Change the files in a way that the training file contains all possible items
+        unique_items = unique_items_train.union(val_data.item_id.unique())
+        left_sid = list(unique_items - unique_items_train)
+        print(left_sid)
+        items_not_in_train = val_data['item_id'].isin(left_sid)        
+        train_data = train_data.append(val_data[items_not_in_train])
+        val_data = val_data[~items_not_in_train]
 
-    print (users_not_in_all)
-    print("Users {0} in union {1} in intersection".format(len(union_users),len(intersection_users)))
-    
-    users_not_in_all_aux = train_data['user_id'].isin(users_not_in_all)
-    train_data = train_data[~users_not_in_all_aux]
-    users_not_in_all_aux = val_data['user_id'].isin(users_not_in_all)
-    val_data = val_data[~users_not_in_all_aux]
-    users_not_in_all_aux = test_data['user_id'].isin(users_not_in_all)
-    test_data = test_data[~users_not_in_all_aux]
-    print("Users {0} in union {1} in intersection".format(len(union_users),len(intersection_users)))
-    #------------------------------------------------------------------
-    '''
+        print("len items test : "+str(len(test_data.item_id.unique())))
+        test_data = test_data[test_data['item_id'].isin(unique_items)]
+        print("len items test : "+str(len(test_data.item_id.unique())))
 
-    #Change the files in a way that the training file contains all possible items
-    unique_items = unique_items_train.union(val_data.item_id.unique())
-    left_sid = list(unique_items - unique_items_train)
-    
-    #TODO remove
-    '''for x in val_data.item_id.unique():
-        unique_items.add(x)    
 
-    left_sid = list()
-    for i, sid in enumerate(unique_items):
-        if sid not in train_data.item_id.unique():
-            left_sid.append(sid)
-    '''
-        
-    items_not_in_train = val_data['item_id'].isin(left_sid)
+        print("unique items time: "+ str(time.time()-ini))
 
-    tr_data = train_data.append(val_data[items_not_in_train])
-    val_data = val_data[~items_not_in_train]
+    else:
 
-    test_data = test_data[test_data['item_id'].isin(unique_items)]
+        unique_items = unique_items_train.union(test_data.item_id.unique())
+        left_sid = list(unique_items - unique_items_train)
+        print(left_sid)
+        items_not_in_train = test_data['item_id'].isin(left_sid)        
+        train_data = train_data.append(test_data[items_not_in_train])
+        print("len items test : "+str(len(test_data.item_id.unique())))
+        test_data = test_data[~items_not_in_train]
+        print("len items test : "+str(len(test_data.item_id.unique())))
 
-    print("unique items "+ str(time.time()-ini))
+        '''print("len items test : "+str(len(test_data.item_id.unique())))
+        test_data = test_data[test_data['item_id'].isin(unique_items)]
+        print("len items test : "+str(len(test_data.item_id.unique())))
+
+
+        print("unique items time: "+ str(time.time()-ini))'''
+
+
+
+    if len(left_sid) > 0:
+        return train_data,val_data,test_data,True
+    else:
+        return train_data,val_data,test_data,False
+
+
+
+
 
 def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
                    min_ratings=10, use_abs_rating_counts=False, **kwargs):
@@ -553,8 +453,6 @@ def plot_histograms(num_x_axis,num_y_axis,countings,normalize=False,**kwargs):
     
     
 
-
-
 def shuffle_df(df):
     return df.reindex(np.random.permutation(df.index))
 
@@ -590,9 +488,15 @@ def make_folds(ratings, num_folds=5, validation=False,seed_value=123):
                     baseval.append(split)
                     base.append(split)
 
-        if validation:
-            f = ValidationFold(pd.concat(test), pd.concat(base),
-                               pd.concat(valid), pd.concat(baseval))
+        if validation:                
+            #TODO Samuel - Testar o que é a saida do groupby e pd.concat
+            basex,validx,testx,need_save = ensure_same_users_items2(pd.concat(base),pd.concat(valid),pd.concat(test))
+            basevalx,_,testx,need_save = ensure_same_users_items2(pd.concat(baseval),None,testx)
+            f = ValidationFold(testx, basex,
+                               validx, basevalx)
+
+            #f = ValidationFold(pd.concat(test), pd.concat(base),
+            #                   pd.concat(valid), pd.concat(baseval))
         else:
             f = Fold(pd.concat(test), pd.concat(base))
         folds.append(f)
@@ -635,8 +539,12 @@ def save_folds(folds, dir_path, validation,use_enum=False,seed_number=0):
  
 
 
-        if validation:
-            ensure_same_users_items(fold.base,fold.validation,fold.test)
+        '''if validation:
+            #fold.base,fold.validation,fold.test, need_save = ensure_same_users_items2(fold.base,fold.validation,fold.test)
+            xbase,xvalidation,xtest, need_save = ensure_same_users_items2(fold.base,fold.validation,fold.test)
+        else:
+            fold.base,fold.validation,fold.test, need_save = ensure_same_users_items2(fold.base,None,fold.test)'''
+
         #-------------------------------------------------------------        
 
         save_ratings_file(path.format(i + 1, "test"), fold.test)
