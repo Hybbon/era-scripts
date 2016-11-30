@@ -253,7 +253,7 @@ train, validation and test dataframes
 boolean indicating if some modification was done in the DFs
 
 '''
-def ensure_same_users_items2(train_data,val_data,test_data):
+def ensure_same_users_items(train_data,val_data,test_data):
 
     ini = time.time()    
 
@@ -490,8 +490,8 @@ def make_folds(ratings, num_folds=5, validation=False,seed_value=123):
 
         if validation:                
             #TODO Samuel - Testar o que é a saida do groupby e pd.concat
-            basex,validx,testx,need_save = ensure_same_users_items2(pd.concat(base),pd.concat(valid),pd.concat(test))
-            basevalx,_,testx,need_save = ensure_same_users_items2(pd.concat(baseval),None,testx)
+            basex,validx,testx,need_save = ensure_same_users_items(pd.concat(base),pd.concat(valid),pd.concat(test))
+            basevalx,_,testx,need_save = ensure_same_users_items(pd.concat(baseval),None,testx)
             f = ValidationFold(testx, basex,
                                validx, basevalx)
 
@@ -540,10 +540,10 @@ def save_folds(folds, dir_path, validation,use_enum=False,seed_number=0):
 
 
         '''if validation:
-            #fold.base,fold.validation,fold.test, need_save = ensure_same_users_items2(fold.base,fold.validation,fold.test)
-            xbase,xvalidation,xtest, need_save = ensure_same_users_items2(fold.base,fold.validation,fold.test)
+            #fold.base,fold.validation,fold.test, need_save = ensure_same_users_items(fold.base,fold.validation,fold.test)
+            xbase,xvalidation,xtest, need_save = ensure_same_users_items(fold.base,fold.validation,fold.test)
         else:
-            fold.base,fold.validation,fold.test, need_save = ensure_same_users_items2(fold.base,None,fold.test)'''
+            fold.base,fold.validation,fold.test, need_save = ensure_same_users_items(fold.base,None,fold.test)'''
 
         #-------------------------------------------------------------        
 

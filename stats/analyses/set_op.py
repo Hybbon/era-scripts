@@ -104,8 +104,8 @@ def isect_histogram_frame(frame, best_comb=None):
     frame = filter_by_best_comb(frame, best_comb)
     counts = frame.groupby('comb_length').apply(count_by_size)
     counts = counts.reset_index()
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
     counts.columns = ['comb_length', 'isect_size', 'count']
     counts = counts[counts.comb_length <= 5]
     counts = counts.sort_values(['comb_length', 'isect_size'])
