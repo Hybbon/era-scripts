@@ -639,6 +639,7 @@ non_mml_algs = {
     "Hybrid_librec" : librec_closure("Hybrid"),
     "PRankD_librec" : librec_closure("PRankD"),
     "FISM_librec" : librec_closure("FISM"),
+    "CLiMF_librec" : librec_closure("CLiMF"),
     "CoFactor" : cofactor_run,
     "libfm" :   libfm_run,
     "Poisson": poisson_run
