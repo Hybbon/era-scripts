@@ -213,29 +213,39 @@ def plot(res_tuple, dsr, output_dir, conf, ext='pdf'):
         #                "Nusmero de algoritmos combinados (k)", comb_lengths,
         #                "Itens em comum", isect_hits)
 
-        # plot_all_and_hits(os.path.join(slice_dir,
-        #                                'isect_both.{0}'.format(ext)),
-        #                   "Intersection between k algorithms",
-        #                   "Combination size (k)", comb_lengths,
-        #                   "Avg. items in common", isect_all, isect_hits)
+        plot_all_and_hits(os.path.join(slice_dir,
+                                       'isect_both.{0}'.format(ext)),
+                          "Intersection between k algorithms",
+                          "Combination size (k)", comb_lengths,
+                          "Avg. items in common", isect_all, isect_hits)
+
+        slice_size = s[1] - s[0]
+        isect_all_by_size = [isect / slice_size for isect in isect_all]
+        isect_hits_by_size = [isect / slice_size for isect in isect_hits]
+
+        plot_all_and_hits(os.path.join(slice_dir,
+                                       'isect_by_size.{0}'.format(ext)),
+                          "Intersection between k algorithms / size of slice",
+                          "Combination size (k)", comb_lengths,
+                          "Avg. items in common", isect_all_by_size, isect_hits_by_size)
 
         plot_frame_histogram(os.path.join(slice_dir,
                                           'hist_all_best.{0}'.format(ext)),
                              "Number\nof items",
                              "Number of methods in agreement",
                              "Users (%)", frame_all_best)
-        # plot_frame_histogram(os.path.join(slice_dir,
-        #                                   'hist_all_mean.{0}'.format(ext)),
-        #                      "Number\nof items",
-        #                      "Number of methods in agreement",
-        #                      "Users (%)", frame_all_mean)
+        plot_frame_histogram(os.path.join(slice_dir,
+                                          'hist_all_mean.{0}'.format(ext)),
+                             "Number\nof items",
+                             "Number of methods in agreement",
+                             "Users (%)", frame_all_mean)
         plot_frame_histogram(os.path.join(slice_dir,
                                           'hist_hits_best.{0}'.format(ext)),
                              "Number\nof items",
                              "Number of methods in agreement",
                              "Users (%)", frame_hits_best)
-        # plot_frame_histogram(os.path.join(slice_dir,
-        #                                   'hist_hits_mean.{0}'.format(ext)),
-        #                      "Number\nof items",
-        #                      "Number of methods in agreement",
-        #                      "Users (%)", frame_hits_mean)
+        plot_frame_histogram(os.path.join(slice_dir,
+                                          'hist_hits_mean.{0}'.format(ext)),
+                             "Number\nof items",
+                             "Number of methods in agreement",
+                             "Users (%)", frame_hits_mean)
