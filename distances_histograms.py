@@ -308,6 +308,22 @@ def plot_scatter_distances(args,lengths,alg_names,out_dir):
                 
 
 
+
+def save_distance_matrix(alg_names,distance,outf,out_dir):
+
+    output = open(os.path.join(out_dir,outf),'w')
+
+    nrows,ncol = distance.shape
+    output.write(','.join(alg_names)+'\n')
+
+    for i in range(nrows):
+        values = ','.join([str(x) for x in distance[i]])
+        output.write(alg_names[i]+','+values+'\n')
+        
+
+    output.close()
+
+
 if __name__ == '__main__':
 
 
@@ -324,12 +340,12 @@ if __name__ == '__main__':
     headers = ('user_id','item_id','rating')
     ratings = pd.read_csv(os.path.join(basedir,'u1.base'),sep='\t',names=headers)        
     user_quartiles = generate_users_quartiles(ratings)
-    lengths = [10,20]
+    lengths = [10,20,30]
 
     alg_names = sorted([os.path.basename(path) for path in args.files])
     alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
 
-    plot_scatter_distances(args,lengths,alg_names,out_dir)
+    #plot_scatter_distances(args,lengths,alg_names,out_dir)
 
     #plot_scatter_distances()
 
@@ -354,7 +370,7 @@ if __name__ == '__main__':
 
     dist_sorted = dist_sorted[:,permutation]
 
-
+    save_distance_matrix(alg_names,distance_matrix,'alg_distances',out_dir)
 
     plot_heatmap(distance_matrix,alg_names,'heatmap.pdf',out_dir=out_dir)
     plot_heatmap(dist_sorted,alg_names_sorted,'sorted_heatmap.pdf',out_dir=out_dir)
