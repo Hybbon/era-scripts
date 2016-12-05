@@ -38,4 +38,4 @@ if __name__ == '__main__':
 
     pre_CoF.run(args) #pass args
     CoF.run(args) #pass args
-    os.system('rm -r {0}/*'.format(os.path.join(args.data,args.proc_folder)))
+    os.system('rm -r {0}*'.format(os.path.join(args.data,args.proc_folder,args.part)))
