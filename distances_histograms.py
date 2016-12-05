@@ -187,7 +187,7 @@ def plot_heatmap(values,alg_names,filename,out_dir='./'):
 
     fig, ax = plt.subplots()
     heatmap = ax.pcolor(values, cmap=plt.cm.Blues, alpha=0.8)
-
+    #ax.set_title('Pairwise distances between recommendation algorithms',loc='botton')
     # Format
     fig = plt.gcf()
     fig.set_size_inches(13, 13)
@@ -205,34 +205,20 @@ def plot_heatmap(values,alg_names,filename,out_dir='./'):
     ax.set_yticklabels(alg_names, minor=False)
     plt.xticks(rotation=90)
 
+
+    # Add colorbar, make sure to specify tick locations to match desired ticklabels
+    cbar = fig.colorbar(heatmap, ticks=[0,0.25,0.5,0.75,0.99])
+    cbar.ax.set_yticklabels(['0','0.25','0.5','0.75','1'])  # vertically oriented colorbar
+
     plt.savefig(os.path.join(out_dir,filename))
     plt.close()
 
-
-
-if __name__ == '__main__':
-
-
-    args = parse_args()
-    #configs = stats.aux.load_configs(args.config)
-    
-    basedir = os.path.dirname(args.files[0])
-
-    out_dir = os.path.join(basedir,'rank_distances')
-    if not os.path.isdir(out_dir):
-        os.mkdir(out_dir)
-
-
-    headers = ('user_id','item_id','rating')
-    ratings = pd.read_csv(os.path.join(basedir,'u1.base'),sep='\t',names=headers)        
-    user_quartiles = generate_users_quartiles(ratings)
-    lengths = [10,20,30,40]
-
-    alg_names = sorted([os.path.basename(path) for path in args.files])
+def plot_scatter_distances(args,lengths,alg_names,out_dir):
     alg_means = {name:[] for name in alg_names}
-    
 
-    '''for length in lengths:
+    fig,ax = plt.subplots()
+
+    for length in lengths:
         algs = dist.load_algs(args.files,length)    
         distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
         #alg_names = sorted([os.path.basename(path) for path in algs.keys()])
@@ -244,9 +230,13 @@ if __name__ == '__main__':
             alg_means[name].append(aux_mean[pos])
         #colors = np.linspace(0,1,len(y))
         x = [length for _ in range(len(y))]
-        plt.scatter(x,y)
+        ax.scatter(x,y)
 
-    plt.savefig(os.path.join(out_dir,'scatter_allusers.png'))
+    ax.set_xticks(lengths)
+    ax.set_xlabel("Ranking size")
+    ax.set_ylabel("Distance")
+
+    plt.savefig(os.path.join(out_dir,'scatter_allusers.pdf'))
     plt.close()
 
 
@@ -256,13 +246,17 @@ if __name__ == '__main__':
         x = [length for _ in range(len(y))]
         plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)
 
-    plt.savefig(os.path.join(out_dir,'scatter_allusers_means.png'))
+    ax.set_xticks(lengths)
+    ax.set_xlabel("Ranking size")
+    ax.set_ylabel("Distance")
+
+    plt.savefig(os.path.join(out_dir,'scatter_allusers_means.pdf'))
     plt.close()
 
 
+    #distances last quartile
+
     alg_means_quartiles = {name:[] for name in alg_names}
-
-
     for length in lengths:
         algs = dist.load_algs(args.files,length)    
         distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2,users_to_use=user_quartiles[3])
@@ -285,7 +279,11 @@ if __name__ == '__main__':
         x = [length for _ in range(len(y))]
         plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)"""
 
-    plt.savefig(os.path.join(out_dir,'scatter_lastquartile.png'))
+    ax.set_xticks(lengths)
+    ax.set_xlabel("Ranking size")
+    ax.set_ylabel("Distance")
+
+    plt.savefig(os.path.join(out_dir,'scatter_lastquartile.pdf'))
     plt.close()
 
     for i,length in enumerate(lengths):
@@ -294,7 +292,11 @@ if __name__ == '__main__':
         x = [length for _ in range(len(y))]
         plt.scatter(x,y,c=colors,cmap=plt.cm.RdYlGn)
 
-    plt.savefig(os.path.join(out_dir,'scatter_lastquartile_means.png'))
+    ax.set_xticks(lengths)
+    ax.set_xlabel("Ranking size")
+    ax.set_ylabel("Distance")
+
+    plt.savefig(os.path.join(out_dir,'scatter_lastquartile_means.pdf'))
     plt.close()
 
 
@@ -304,10 +306,37 @@ if __name__ == '__main__':
             out_f.write(alg+',' + ','.join([str(x) for x in alg_means[alg]]) + ',')
             out_f.write(','.join([str(x) for x in alg_means_quartiles[alg]]) + '\n')
                 
-    '''
+
+
+if __name__ == '__main__':
+
+
+    args = parse_args()
+    #configs = stats.aux.load_configs(args.config)
+    
+    basedir = os.path.dirname(args.files[0])
+
+    out_dir = os.path.join(basedir,'rank_distances')
+    if not os.path.isdir(out_dir):
+        os.mkdir(out_dir)
+
+
+    headers = ('user_id','item_id','rating')
+    ratings = pd.read_csv(os.path.join(basedir,'u1.base'),sep='\t',names=headers)        
+    user_quartiles = generate_users_quartiles(ratings)
+    lengths = [10,20]
+
+    alg_names = sorted([os.path.basename(path) for path in args.files])
+    alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
+
+    plot_scatter_distances(args,lengths,alg_names,out_dir)
+
+    #plot_scatter_distances()
+
+
     #plt.show()
 
-    alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
+    
 
     algs = dist.load_algs(args.files,10)    
     distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
