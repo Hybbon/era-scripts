@@ -345,7 +345,7 @@ if __name__ == '__main__':
     alg_names = sorted([os.path.basename(path) for path in args.files])
     alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
 
-    #plot_scatter_distances(args,lengths,alg_names,out_dir)
+    plot_scatter_distances(args,lengths,alg_names,out_dir)
 
     #plot_scatter_distances()
 
