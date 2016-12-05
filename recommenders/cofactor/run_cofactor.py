@@ -32,10 +32,9 @@ def parse_args():
 if __name__ == '__main__':
 
     args = parse_args()
-    print args
     print "-----------------------------"
 
 
-    pre_CoF.run(args) #pass args
+    pre_CoF.run(args) 
     CoF.run(args) #pass args
     os.system('rm -r {0}*'.format(os.path.join(args.data,args.proc_folder,args.part)))
