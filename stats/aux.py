@@ -9,7 +9,13 @@ TMP_DIR = "tmp/"
 def load_results(path):
     """Loads the results pickle to an object"""
     with open(path, "rb") as res_input:
-        return pickle.load(res_input)
+        try:
+            return pickle.load(res_input)
+        except UnicodeDecodeError as e:
+            print("Pickle file created using Python 2")
+            #print(e)
+            print("Trying to reload")
+            return pickle.load(res_input,fix_imports=True,encoding='bytes')
 
 
 def save_results(path, results):

@@ -80,8 +80,7 @@ def run(kwargs):
     tr_data = read_ratings_file(os.path.join(DATA_DIR, trainf), sep='\t')
     te_data = read_ratings_file(os.path.join(DATA_DIR, testf), sep='\t')
     val_data = None
-    if not kwargs.no_validation:
-        
+    if not kwargs.no_validation:        
         val_data = read_ratings_file(os.path.join(DATA_DIR, valf), sep='\t')
 
     
@@ -140,8 +139,9 @@ def run(kwargs):
     tr_data = numerize(tr_data,user2id,item2id)
     tr_data.to_csv(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-train.csv'), index=False)
 
-    val_data = numerize(val_data,user2id,item2id)
-    val_data.to_csv(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-validation.csv'), index=False)
+    if not kwargs.no_validation: 
+        val_data = numerize(val_data,user2id,item2id)
+        val_data.to_csv(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-validation.csv'), index=False)
 
     te_data = numerize(te_data,user2id,item2id)
     te_data.to_csv(os.path.join(DATA_DIR, kwargs.proc_folder, partition+'-test.csv'), index=False)

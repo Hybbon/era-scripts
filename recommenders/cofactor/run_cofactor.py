@@ -34,6 +34,9 @@ if __name__ == '__main__':
     args = parse_args()
     print "-----------------------------"
 
+    if 'reeval' in args.data:
+        print(args)
+        args.no_validation = True
 
     pre_CoF.run(args) 
     CoF.run(args) #pass args
