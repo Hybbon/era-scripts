@@ -40,9 +40,6 @@ def get_item_list(dataset):
 
 
 '''
-TODO needs review, why to inflate test??
-Preciso inflar o treino para atribuir os ratings para os items alocados para aqueles items, isso estah correto?
-
 Sample items that are not rated by the user as negative examples and 
 inflate the training data with them
 '''
@@ -81,10 +78,14 @@ def inflate_test_for_prediction(train_data,item_list):
     
     return new_test
 
+'''
+Creates a test file containing all items for each user. This new test will be
+used to construct a ranking for the users.
 
-
-def inflate_test_for_prediction_savemem(train_data,item_list,filename):    
-
+This version uses a list instead of a dict to save the new_test
+'''
+def inflate_test_for_prediction_savemem(train_data,item_list):
+    
     new_test = []
     users_ids = sorted(train_data.keys())
     for usr_idx,user in enumerate(users_ids):
@@ -97,84 +98,23 @@ def inflate_test_for_prediction_savemem(train_data,item_list,filename):
     return new_test,users_ids
 
 
-
-
-'''
-Creates a test file containing all items for each user. This new test will be
-used to construct a ranking for the users.
-
-This version uses a list instead of a dict to save the new_test
-'''
-def inflate_andsave_test_for_prediction(train_data,item_list,filename):    
-
-    #new_test = []
-    out = open(filename,'w')    
-    users_ids = sorted(train_data.keys())
-    for usr_idx,user in enumerate(users_ids):
-        #new_test.append([])
-        items_to_save = ''
-        for item,rating in item_list:
-            is_in_train = len([(item_u,rating_u) for item_u,rating_u in train_data[user] if item_u == item])
-            if is_in_train == 0:
-                items_to_save += '{0}\t{1}\t{2}\n'.format(user,item,rating)
-                #new_test[-1].append((item,rating))
-    
-        out.write(items_to_save)
-    #return new_test,users_ids
     
 
-'''
-Create rankings without using the test file inflated in the past steps
-This function just uses the list of all items and the items already rated by 
-the users in the training file
-
-'''
-def create_rankings(original_train,item_list,predictions_f,outfolder,out_name,usrs_ids,rank_size=10):
-    
-    #load file with libfm predictions
-    pred_f = open(predictions_f,'r')
-    rankings_f = open(os.path.join(outfolder,out_name),'w')     
-    
-    for usr_idx,user in enumerate(usrs_ids):#test_data.keys():
-
-        preds = []
-        #load items that was already rated by the user in the training file
-        #this loading do not consider the items that where inflated in the 
-        #training files (items rated with 0)
-        items_already_rated = [x for x,y in original_train[user] if y != 0]
-
-        for item_idx,item_rat in enumerate(item_list):        
-        #for item_id,_ in test_data[user]:
-            item_id = item_rat[0]
-            #verify if the item was not ratted in the training and therefore
-            #loads the rating
-            if not item_id in items_already_rated:                
-                pred_value = pred_f.readline().strip()
-                pred_value = float(pred_value)
-                preds.append((item_id,pred_value))
-        
-        preds.sort(key=lambda tup : tup[1], reverse=True)
-        
-        s = '{0}\t['.format(user)
-        s += ','.join([str(x)+':'+str(y) for x,y in preds[:rank_size]])
-        s += ']\n'
-        rankings_f.write(s)
-
-    pred_f.close()
-    rankings_f.close()
-
-'''def create_rankings_deprecated(test_data,predictions_f,outfolder,out_name,usrs_ids,rank_size=10):
+def create_rankings(test_data,predictions_f,outfolder,out_name,usrs_ids,rank_size=10):
 
 
     pred_f = open(predictions_f,'r')
+
     rankings_f = open(os.path.join(outfolder,out_name),'w') 
 
-   
+    
+
     for usr_idx,user in enumerate(usrs_ids):#test_data.keys():
-        num_items_test = len(test_data[user])
+        num_items_test = len(test_data[usr_idx])
         preds = []
         
-        for item_id,_ in test_data[user]:            
+        for item_id,_ in test_data[usr_idx]:
+            
             pred_value = pred_f.readline().strip()
             pred_value = float(pred_value)
             preds.append((item_id,pred_value))
@@ -190,7 +130,7 @@ def create_rankings(original_train,item_list,predictions_f,outfolder,out_name,us
 
     pred_f.close()
     rankings_f.close()
-'''    
+    
 
 def read_movilens_format(rating_file,sep='\t'):
 
@@ -200,7 +140,10 @@ def read_movilens_format(rating_file,sep='\t'):
     tokens = data.readline().strip().split(sep)
     past_usr,past_mov,past_rat = tokens[:3]
     line_usr = past_mov
+
     users = {int(past_usr):[(int(past_mov),float(past_rat))]}
+
+
     nusers = 1;
     for line in data:
         tokens = line.strip().split(sep)
@@ -255,46 +198,31 @@ if __name__ == '__main__':
     train_data = read_movilens_format(train) #args.test
     item_list = get_item_list(train_data)
 
-    if not os.path.isdir(os.path.join(datadir,'tmp_libfm')):
-        os.mkdir(os.path.join(datadir,'tmp_libfm'))
-
-
-    #TODO new_test,usrs_ids = inflate_test_for_prediction_savemem(train_data,item_list)
-    test_libfm = os.path.join(datadir,'tmp_libfm',test_name + '_inflated')
-    inflate_andsave_test_for_prediction(train_data,item_list,test_libfm)
+    new_test,usrs_ids = inflate_test_for_prediction_savemem(train_data,item_list)
     inflate_train(train_data,item_list)
 
     #train_libfm = args.train.split('/')[-1] + '_inflated'
     #test_libfm = args.test.split('/')[-1] + '_inflated'
-    
+    if not os.path.isdir(os.path.join(datadir,'tmp_libfm')):
+        os.mkdir(os.path.join(datadir,'tmp_libfm'))
+
     train_libfm = os.path.join(datadir,'tmp_libfm',train_name + '_inflated')
-    #TODO test_libfm = os.path.join(datadir,'tmp_libfm',test_name + '_inflated')
+    test_libfm = os.path.join(datadir,'tmp_libfm',test_name + '_inflated')
     save_ratings_movielens_format(train_data,train_libfm)
-    #TODO save_ratings_movielens_format(new_test,test_libfm,usrs_ids)
-
-    #os.system('scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
-    #             '-separator "\t"')
-
+    save_ratings_movielens_format(new_test,test_libfm,usrs_ids)
     os.system('./recommenders/libfm/scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
                  '-separator "\t"')
 
     output_f = os.path.join(datadir,'tmp_libfm',args.part+'_predictions.dat')
 
-    #os.system("bin/libFM -task r -train {0}.libfm -test {1}.libfm -dim '1,1,8' ".format(train_libfm,test_libfm) +
-    #            "-out {0}".format(output_f))
-
-
     os.system("./recommenders/libfm/bin/libFM -task r -train {0}.libfm -test {1}.libfm -dim '1,1,8' ".format(train_libfm,test_libfm) +
                 "-out {0}".format(output_f))
 
     
-    #new_test = read_movilens_format(test_libfm)
-    usrs_ids = sorted(train_data.keys())
 
+    create_rankings(new_test,output_f,datadir,args.part+'-libfm.out',usrs_ids = usrs_ids, rank_size=args.num_items)
 
-    #create_rankings(new_test,output_f,datadir,args.part+'-libfm.out',usrs_ids = usrs_ids, rank_size=args.num_items)
-    create_rankings(train_data,item_list,output_f,datadir,args.part+'-libfm2.out',usrs_ids = usrs_ids, rank_size=args.num_items)
-    #os.system('rm '+datadir+'tmp_libfm/'+args.part+'*')
+    os.system('rm '+datadir+'tmp_libfm/'+args.part+'*')
 
 
 
