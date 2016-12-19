@@ -129,6 +129,8 @@ def parse_args():
     p.add_argument("--libfm", type=str,
         default="recommenders/libfm/libfm_ranking.py")
     p.add_argument("--poisson", default="recommenders/poisson/hgaprec")
+    p.add_argument("--cache_size",type=int,default=10000000000,
+        help="Cache size used in libfm mainly when the input files don't fit in memory. The value is given in bytes, default is 10GB")
 
     return p.parse_args()
 
@@ -217,7 +219,7 @@ def cofactor_run(kwargs):
 
 
 # Libfm STUFF
-libfm_cmd = ("{python2} {libfm} {data_folder} -p {p} -n {num_items}")
+libfm_cmd = ("{python2} {libfm} {data_folder} -p {p} -n {num_items} --cache_size {cache_size} --binarize")
 
 
 def libfm_run(kwargs):
@@ -596,6 +598,7 @@ def arg_set_for_run(p, alg, args, conf):
         'puresvd': puresvd_script_str,
         'cofactor': cofactor_script_str,
         'libfm': libfm_script_str,
+        'cache_size' : args.cache_size,
         'mml_binary': mml_binary_str,
         'mml_binary_rp': mml_binary_rp_str,
         'cr_binary': cr_binary_str,

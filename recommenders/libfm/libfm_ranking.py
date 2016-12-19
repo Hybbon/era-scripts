@@ -2,6 +2,9 @@ import sys
 import os
 import argparse
 import random
+import multiprocessing as mp
+#deal with the Attribute error : __exit__ when using mp.Pool  as pool
+from contextlib import closing 
 
 
 def parse_args():
@@ -19,7 +22,11 @@ def parse_args():
     p.add_argument("--val", type=str,default='',
             help="path to the validation file, movielens format")
     p.add_argument("--test", type=str,
-            help="path to the test file, movielens format")    
+            help="path to the test file, movielens format")
+    p.add_argument("--binarize", action="store_true",
+            help="Use this argument when there is a need to use binary data in the libfm input. Possible this option is useful when you want libfm to read data faster or if the dataset does not fit in memory. In the last case you also need to set the parameter --cache_size")
+    p.add_argument("--cache_size",type=int, default=10000000000,
+            help="The max size used by each of the input files in the binary format. This is the size for the train, test and transposed data. The size is given in Bytes and the default corresponds to 10GB (10000000000)")
 
     return p.parse_args()
 
@@ -40,11 +47,13 @@ def get_item_list(dataset):
 
 
 '''
-TODO needs review, why to inflate test??
-Preciso inflar o treino para atribuir os ratings para os items alocados para aqueles items, isso estah correto?
-
 Sample items that are not rated by the user as negative examples and 
 inflate the training data with them
+
+Since the libfm works as a Rating Prediction, or even a regression, algorithm
+it needs examples of all 'classes'.
+Therefore, these items are inserted in the training to be used as negative examples (we 
+attribute them a rating 0). 
 '''
 def inflate_train(train_data,item_list):
 
@@ -246,9 +255,17 @@ if __name__ == '__main__':
         
     datadir = args.data
 
+    print args
+
+    #TODO 
+    #TODO Deveria pegar o arquivo de validacao e juntar com o de teste
+    #TODO
     train_name = args.part+'.base'
     test_name = args.part+'.test'
 
+
+    run_dir = "./recommenders/libfm/"
+    #run_dir = "./"
     train = os.path.join(datadir,train_name)
     test = os.path.join(datadir,test_name)           
     #test_data = read_movilens_format(test) #args.test
@@ -259,41 +276,74 @@ if __name__ == '__main__':
         os.mkdir(os.path.join(datadir,'tmp_libfm'))
 
 
-    #TODO new_test,usrs_ids = inflate_test_for_prediction_savemem(train_data,item_list)
     test_libfm = os.path.join(datadir,'tmp_libfm',test_name + '_inflated')
     inflate_andsave_test_for_prediction(train_data,item_list,test_libfm)
     inflate_train(train_data,item_list)
-
-    #train_libfm = args.train.split('/')[-1] + '_inflated'
-    #test_libfm = args.test.split('/')[-1] + '_inflated'
-    
+   
     train_libfm = os.path.join(datadir,'tmp_libfm',train_name + '_inflated')
-    #TODO test_libfm = os.path.join(datadir,'tmp_libfm',test_name + '_inflated')
-    save_ratings_movielens_format(train_data,train_libfm)
-    #TODO save_ratings_movielens_format(new_test,test_libfm,usrs_ids)
 
-    #os.system('scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
-    #             '-separator "\t"')
+    save_ratings_movielens_format(train_data,train_libfm)        
 
-    os.system('./recommenders/libfm/scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
+    os.system(run_dir+'scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
                  '-separator "\t"')
 
+
+    train_libfm += ".libfm"
+    test_libfm += ".libfm"
+
+
+    if args.binarize:        
+        #convertendo os arquivos para o formato binario do libfm
+        print "Binarizando"
+
+        conv_cmd = run_dir+"bin/convert --ifile {0} --ofilex {1}_bin.x --ofiley {2}_bin.y"
+        all_conv_cmd = [conv_cmd.format(train_libfm,train_libfm,train_libfm),
+                        conv_cmd.format(test_libfm,test_libfm,test_libfm)]
+        with closing(mp.Pool(processes=2)) as pool:
+            pool.map(os.system,all_conv_cmd)
+            pool.terminate()
+        #os.system(run_dir+"bin/convert --ifile {0} --ofilex {1}_bin.x --ofiley {2}_bin.y".format(train_libfm,train_libfm,train_libfm))
+        #os.system(run_dir+"bin/convert --ifile {0} --ofilex {1}_bin.x --ofiley {2}_bin.y".format(test_libfm,test_libfm,test_libfm))        
+
+
+        train_libfm += "_bin"
+        test_libfm += "_bin"
+
+        print "Transpondo"
+        #quando utilizamos o formato binario eh necessario realizar a transposicao do arquivos com os artibutos (.x)
+
+        transp_cmd = run_dir+"bin/transpose --ifile {0}.x --ofile {1}.xt"
+        all_transp_cmd = [transp_cmd.format(train_libfm,train_libfm,train_libfm),
+                        transp_cmd.format(test_libfm,test_libfm,test_libfm)]
+
+        with closing(mp.Pool(processes=2)) as pool:
+            pool.map(os.system,all_transp_cmd)
+            pool.terminate()
+
+        #os.system(run_dir+"bin/transpose --ifile {0}.x --ofile {1}.xt".format(train_libfm,train_libfm))
+        #os.system(run_dir+"bin/transpose --ifile {0}.x --ofile {1}.xt".format(test_libfm,test_libfm))
+
+
+    print "TES1"
     output_f = os.path.join(datadir,'tmp_libfm',args.part+'_predictions.dat')
 
-    #os.system("bin/libFM -task r -train {0}.libfm -test {1}.libfm -dim '1,1,8' ".format(train_libfm,test_libfm) +
-    #            "-out {0}".format(output_f))
+    run_cmd = run_dir+"bin/libFM -task r -iter 50 -train "
+    run_cmd += "{0} -test {1} -dim '1,1,8' ".format(train_libfm,test_libfm)
+    run_cmd += "-out {0}".format(output_f)
 
+    if args.binarize:
+        run_cmd += " --cache_size {0}".format(args.cache_size)
 
-    os.system("./recommenders/libfm/bin/libFM -task r -train {0}.libfm -test {1}.libfm -dim '1,1,8' ".format(train_libfm,test_libfm) +
-                "-out {0}".format(output_f))
+    print run_cmd
 
-    
+    os.system(run_cmd)    
+    print "TES2"
     #new_test = read_movilens_format(test_libfm)
     usrs_ids = sorted(train_data.keys())
 
 
     #create_rankings(new_test,output_f,datadir,args.part+'-libfm.out',usrs_ids = usrs_ids, rank_size=args.num_items)
-    create_rankings(train_data,item_list,output_f,datadir,args.part+'-libfm2.out',usrs_ids = usrs_ids, rank_size=args.num_items)
+    create_rankings(train_data,item_list,output_f,datadir,args.part+'-libfm.out',usrs_ids = usrs_ids, rank_size=args.num_items)
     #os.system('rm '+datadir+'tmp_libfm/'+args.part+'*')
 
 
