@@ -28,6 +28,12 @@ def parse_args():
     p.add_argument("--cache_size",type=int, default=10000000000,
             help="The max size used by each of the input files in the binary format. This is the size for the train, test and transposed data. The size is given in Bytes and the default corresponds to 10GB (10000000000)")
 
+    p.add_argument("--method",type=str, default="mcmc", 
+            help="model to be used in libfm, options mcmc,als,sgd")
+
+    p.add_argument("--save_model",action="store_true")
+
+
     return p.parse_args()
 
 '''
@@ -277,6 +283,7 @@ if __name__ == '__main__':
 
 
     test_libfm = os.path.join(datadir,'tmp_libfm',test_name + '_inflated')
+    test_libfm_uninflated = os.path.join(datadir,'tmp_libfm',test_name)
     inflate_andsave_test_for_prediction(train_data,item_list,test_libfm)
     inflate_train(train_data,item_list)
    
@@ -284,13 +291,18 @@ if __name__ == '__main__':
 
     save_ratings_movielens_format(train_data,train_libfm)        
 
+
+    os.system("cp "+os.path.join(datadir,test_name)+" "+ test_libfm_uninflated)
+    os.system(run_dir+'scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm_uninflated)+
+             '-separator "\t"')
     os.system(run_dir+'scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
-                 '-separator "\t"')
+             '-separator "\t"')
+
 
 
     train_libfm += ".libfm"
     test_libfm += ".libfm"
-
+    test_libfm_uninflated += '.libfm'
 
     if args.binarize:        
         #convertendo os arquivos para o formato binario do libfm
@@ -304,8 +316,6 @@ if __name__ == '__main__':
             pool.terminate()
         #os.system(run_dir+"bin/convert --ifile {0} --ofilex {1}_bin.x --ofiley {2}_bin.y".format(train_libfm,train_libfm,train_libfm))
         #os.system(run_dir+"bin/convert --ifile {0} --ofilex {1}_bin.x --ofiley {2}_bin.y".format(test_libfm,test_libfm,test_libfm))        
-
-
         train_libfm += "_bin"
         test_libfm += "_bin"
 
@@ -328,15 +338,32 @@ if __name__ == '__main__':
     output_f = os.path.join(datadir,'tmp_libfm',args.part+'_predictions.dat')
 
     run_cmd = run_dir+"bin/libFM -task r -iter 50 -train "
-    run_cmd += "{0} -test {1} -dim '1,1,8' ".format(train_libfm,test_libfm)
-    run_cmd += "-out {0}".format(output_f)
+    if args.save_model and not 'mcmc' in args.method:
+
+        model_path = os.path.join(datadir,'tmp_libfm',args.part+"-model_"+args.method)
+
+        run_cmd += "{0} -test {1} -dim '1,1,8' -method {2} -regular '1,1,1' -save_model {3} ".format(train_libfm,test_libfm_uninflated,args.method,model_path)
+        run_cmd += "-out {0}.temp".format(output_f)
+    else:
+        run_cmd += "{0} -test {1} -dim '1,1,8' ".format(train_libfm,test_libfm)
+        run_cmd += "-out {0}".format(output_f)
 
     if args.binarize:
         run_cmd += " --cache_size {0}".format(args.cache_size)
 
     print run_cmd
 
-    os.system(run_cmd)    
+    os.system(run_cmd)
+        
+
+    if args.save_model and not 'mcmc' in args.method:
+        run_cmd = run_dir+"bin/libFM -task r -iter 1 -train "
+        run_cmd += "{0} -test {1} -dim '1,1,8' -method {2} -regular '1,1,1' -load_model {3} ".format(train_libfm,test_libfm,args.method,model_path)
+        run_cmd += "-out {0}".format(output_f)
+    
+        os.system(run_cmd)
+
+
     print "TES2"
     #new_test = read_movilens_format(test_libfm)
     usrs_ids = sorted(train_data.keys())

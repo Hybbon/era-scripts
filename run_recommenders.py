@@ -132,6 +132,12 @@ def parse_args():
     p.add_argument("--cache_size",type=int,default=10000000000,
         help="Cache size used in libfm mainly when the input files don't fit in memory. The value is given in bytes, default is 10GB")
 
+    p.add_argument("--binarize",action="store_true",
+        help="binarize the data to be used in libfm")
+
+    p.add_argument("--libfm_method",type=str,default='mcmc',
+        help="Method used to in the optimization step of libfm. save_model will only works with ALS and SGD ")
+
     return p.parse_args()
 
 
@@ -219,7 +225,7 @@ def cofactor_run(kwargs):
 
 
 # Libfm STUFF
-libfm_cmd = ("{python2} {libfm} {data_folder} -p {p} -n {num_items} --cache_size {cache_size} --binarize")
+libfm_cmd = ("{python2} {libfm} {data_folder} -p {p} -n {num_items} --method {libfm_method} --cache_size {cache_size} {binarize} --save_model")
 
 
 def libfm_run(kwargs):
@@ -585,6 +591,9 @@ def arg_set_for_run(p, alg, args, conf):
     puresvd_script_str = args.puresvd
     cofactor_script_str = args.cofactor #SAMUEL
     libfm_script_str = args.libfm #SAMUEL
+    binarize_libfm = ''
+    if args.binarize:    
+        binarize_libfm = '--binarize'
 
     librec_binary_str = os.path.join(args.librec, "librec.jar")
     librec_template_dir_str = os.path.join(args.librec, "conf")
@@ -599,6 +608,8 @@ def arg_set_for_run(p, alg, args, conf):
         'cofactor': cofactor_script_str,
         'libfm': libfm_script_str,
         'cache_size' : args.cache_size,
+        'binarize' : binarize_libfm,
+        'libfm_method' : args.libfm_method,
         'mml_binary': mml_binary_str,
         'mml_binary_rp': mml_binary_rp_str,
         'cr_binary': cr_binary_str,
