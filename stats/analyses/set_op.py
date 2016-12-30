@@ -33,10 +33,13 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
             new_algs[alg] = alg_res.slice(begin, end)
         algs = new_algs
 
+    #TODO Conferir possivel causador de estouro de memoria
     tuples = []
 
     alg_res_list = list(algs.values())
-    comb_lengths = range(1, len(algs) + 1)
+    #comb_lengths = range(1, len(algs) + 1)
+    comb_lengths = range(1, 5 + 1)
+
     avg_isect_len_per_r = []
     for r in comb_lengths:
         isect_lenghts = []
@@ -45,7 +48,8 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
             # Performs the intersection between the items in the combination
             isect = alg_res_list[comb[0]]
             for i in comb[1:]:
-                isect &= alg_res_list[i]
+                #the operator & is a alias to the intersection operator defined in the class Algresults
+                isect &= alg_res_list[i] 
             if hits:
                 isect &= hits
 
@@ -56,11 +60,12 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
                     len(ranking),
                     comb
                 ))
-
+            
             avg_isect_len = isect.avg_len()
-
-            isect_lenghts.append(avg_isect_len)
+            isect_lenghts.append(avg_isect_len)            
         avg_isect_len_per_r.append(sum(isect_lenghts) / len(isect_lenghts))
+
+        
 
     col_names = ("comb_length", "user_id", "isect_size", "comb")
     frame = pd.DataFrame.from_records(tuples, columns=col_names)
@@ -119,11 +124,14 @@ def generate(dsr, results, conf):
     # Results are stored, for each kind of result, in a 3D numpy matrix. The
     # dimensions represent slices, partitionings and combination sizes, respec-
     # tively.
-    res = {
+    '''res = {
         label: np.ndarray([len(slices), len(dsr.parts), len(dsr.algs)])
         for label in labels
+    }'''
+    res = {
+        label: np.ndarray([len(slices), len(dsr.parts), 5])
+        for label in labels
     }
-
     frames_all, frames_hits = {}, {}
 
     for p_i, (p, part) in enumerate(dsr.parts.items()):
@@ -148,7 +156,7 @@ def generate(dsr, results, conf):
         label: {
             s: [
                 avg(res[label][s_i, :, r])
-                for r in range(len(dsr.algs))
+                for r in range(5)#len(dsr.algs)
             ]
             for s_i, s in enumerate(slices)
         }
@@ -179,8 +187,8 @@ def plot(res_tuple, dsr, output_dir, conf, ext='pdf'):
     (res_avg, frames_all, frames_hits) = res_tuple
     slices = [tuple(l) for l in conf['slices']]
 
-    comb_lengths = list(range(1, len(dsr.algs) + 1))  # x axis label
-
+    #comb_lengths = list(range(1, len(dsr.algs) + 1))  # x axis label
+    comb_lengths = list(range(1, 5 + 1))  # x axis label
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
