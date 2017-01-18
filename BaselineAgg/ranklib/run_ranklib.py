@@ -1,6 +1,7 @@
 
 import os
 import sys
+import time
 import argparse
 import convert_to_letor_format as conversion
 import create_ranking_from_scores as rank_creator
@@ -23,6 +24,8 @@ def parse_args():
     p.add_argument("-ranker", type=int, default = 6,
         help = "Ranker thar will be used in the l2r 0: MART 1: RankNet 2: RankBoost 3: AdaRank 4: Coordinate Ascent 6: LambdaMART 7: ListNet 8: Random Forests")
     p.add_argument("-ranklib_tmp",type=str,default="ranklib_tmp/")
+    p.add_argument("-converted",action="store_true",
+            help="When set indicates that the conversion to the LETOR format is already done")
 
 
     return p.parse_args()
@@ -46,14 +49,24 @@ def run_ranklib(args):
     if not os.path.isdir(os.path.join(args.out_dir,args.ranklib_tmp)):
         os.mkdir(os.path.join(args.out_dir,args.ranklib_tmp))
 
+
+    timestamp = open(os.path.join(args.out_dir,args.ranklib_tmp,"timestamp"),'w')    
+
     partitions = ["u"+str(i) for i in range(1,6)]
     for part in partitions:
         args.part = part
+        init = time.time()
         cmd = "java -jar {ranklib} -train {base_dir}/classif/{part}.train.letor -ranker {ranker} -metric2t MAP -save {out_dir}{ranklib_tmp}{part}-ranklib_model.txt".format(**args.__dict__)
         os.system(cmd)
         cmd_reeval = "java -jar {ranklib} -load {out_dir}{ranklib_tmp}{part}-ranklib_model.txt -rank {base_dir}/reeval/{part}.train.letor -score {out_dir}{ranklib_tmp}{part}-rankLib.scores".format(**args.__dict__)
         os.system(cmd_reeval)
         create_ranking(args)
+        total_time = time.time() - init
+
+        timestamp.write(part + ":" + str(total_time)+"\n")
+        timestamp.flush()
+
+    timestamp.close()
 
 
 
@@ -67,7 +80,8 @@ def create_ranking(args):
 if __name__ == "__main__":
 
     args = parse_args()
-    convert_datasets(args)
+    if not args.converted:
+        convert_datasets(args)
     run_ranklib(args)
     
 
