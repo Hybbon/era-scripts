@@ -207,7 +207,7 @@ def run(basedir):
 
     for part in range(1,6):
         partition = "u"+str(part)
-        files = glob.glob(basedir+partition+"*.out")    
+        files = sorted(glob.glob(basedir+partition+"*.out"))    
         test = read_test(basedir+partition+'.test')
 
         print files

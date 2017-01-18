@@ -293,9 +293,15 @@ if __name__ == '__main__':
 
 
     os.system("cp "+os.path.join(datadir,test_name)+" "+ test_libfm_uninflated)
-    os.system(run_dir+'scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm_uninflated)+
+
+
+    if not (os.path.isfile(train_libfm+'.libfm') and
+       os.path.isfile(test_libfm+'.libfm') and 
+       os.path.isfile(test_libfm_uninflated+'.libfm')):
+    
+        os.system(run_dir+'scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm_uninflated)+
              '-separator "\t"')
-    os.system(run_dir+'scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
+        os.system(run_dir+'scripts/triple_format_to_libfm.pl -in {0},{1} -target 2 '.format(train_libfm,test_libfm)+
              '-separator "\t"')
 
 
