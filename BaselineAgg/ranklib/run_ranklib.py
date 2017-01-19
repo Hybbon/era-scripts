@@ -10,6 +10,16 @@ import create_ranking_from_scores as rank_creator
 
 
 
+RANKER_NAMES = {0: "MART", 
+                1: "RankNet", 
+                2: "RankBoost", 
+                3: "AdaRank", 
+                4: "CoordinateAscent", 
+                6: "LambdaMART", 
+                7: "ListNet", 
+                8: "RandomForests"}
+
+
 def parse_args():
     p = argparse.ArgumentParser()
     
@@ -23,6 +33,7 @@ def parse_args():
     p.add_argument("-p","--part",type=str,default="u1")
     p.add_argument("-ranker", type=int, default = 6,
         help = "Ranker thar will be used in the l2r 0: MART 1: RankNet 2: RankBoost 3: AdaRank 4: Coordinate Ascent 6: LambdaMART 7: ListNet 8: Random Forests")
+
     p.add_argument("-ranklib_tmp",type=str,default="ranklib_tmp/")
     p.add_argument("-converted",action="store_true",
             help="When set indicates that the conversion to the LETOR format is already done")
@@ -56,9 +67,9 @@ def run_ranklib(args):
     for part in partitions:
         args.part = part
         init = time.time()
-        cmd = "java -jar {ranklib} -train {base_dir}/classif/{part}.train.letor -ranker {ranker} -metric2t MAP -save {out_dir}{ranklib_tmp}{part}-ranklib_model.txt".format(**args.__dict__)
+        cmd = "java -jar {ranklib} -train {base_dir}/classif/{part}.train.letor -ranker {ranker} -metric2t MAP -save {out_dir}{ranklib_tmp}{part}-{0}_model.txt".format(RANKER_NAMES[args.ranker],**args.__dict__)
         os.system(cmd)
-        cmd_reeval = "java -jar {ranklib} -load {out_dir}{ranklib_tmp}{part}-ranklib_model.txt -rank {base_dir}/reeval/{part}.train.letor -score {out_dir}{ranklib_tmp}{part}-rankLib.scores".format(**args.__dict__)
+        cmd_reeval = "java -jar {ranklib} -load {out_dir}{ranklib_tmp}{part}-{0}_model.txt -rank {base_dir}/reeval/{part}.train.letor -score {out_dir}{ranklib_tmp}{part}-{0}.scores".format(RANKER_NAMES[args.ranker],**args.__dict__)
         os.system(cmd_reeval)
         create_ranking(args)
         total_time = time.time() - init
@@ -72,7 +83,9 @@ def run_ranklib(args):
 
 def create_ranking(args):    
 
-    cmd = "python create_ranking_from_scores.py -map {base_dir}/reeval/{part}.train.map -scores {out_dir}{ranklib_tmp}{part}-rankLib.scores -o {out_dir}{part}-RankLib.out".format(**args.__dict__)
+    cmd = "python create_ranking_from_scores.py -map {base_dir}/reeval/{part}.train.map -scores {out_dir}{ranklib_tmp}{part}-{0}.scores -o {out_dir}{part}-{0}.out".format(RANKER_NAMES[args.ranker],**args.__dict__)
+    print(cmd)
+    a = input()
     os.system(cmd)
 
 
