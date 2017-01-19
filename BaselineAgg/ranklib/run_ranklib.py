@@ -33,11 +33,11 @@ def parse_args():
     p.add_argument("-p","--part",type=str,default="u1")
     p.add_argument("-ranker", type=int, default = 6,
         help = "Ranker thar will be used in the l2r 0: MART 1: RankNet 2: RankBoost 3: AdaRank 4: Coordinate Ascent 6: LambdaMART 7: ListNet 8: Random Forests")
-
     p.add_argument("-ranklib_tmp",type=str,default="ranklib_tmp/")
     p.add_argument("-converted",action="store_true",
             help="When set indicates that the conversion to the LETOR format is already done")
 
+    p.add_argument("-Xmx",type=int,default=10)
 
     return p.parse_args()
 
@@ -67,9 +67,9 @@ def run_ranklib(args):
     for part in partitions:
         args.part = part
         init = time.time()
-        cmd = "java -jar {ranklib} -train {base_dir}/classif/{part}.train.letor -ranker {ranker} -metric2t MAP -save {out_dir}{ranklib_tmp}{part}-{0}_model.txt".format(RANKER_NAMES[args.ranker],**args.__dict__)
+        cmd = "java -Xmx{Xmx}g -jar {ranklib} -train {base_dir}/classif/{part}.train.letor -ranker {ranker} -metric2t MAP -save {out_dir}{ranklib_tmp}{part}-{0}_model.txt".format(RANKER_NAMES[args.ranker],**args.__dict__)
         os.system(cmd)
-        cmd_reeval = "java -jar {ranklib} -load {out_dir}{ranklib_tmp}{part}-{0}_model.txt -rank {base_dir}/reeval/{part}.train.letor -score {out_dir}{ranklib_tmp}{part}-{0}.scores".format(RANKER_NAMES[args.ranker],**args.__dict__)
+        cmd_reeval = "java -Xmx{Xmx}g -jar {ranklib} -load {out_dir}{ranklib_tmp}{part}-{0}_model.txt -rank {base_dir}/reeval/{part}.train.letor -score {out_dir}{ranklib_tmp}{part}-{0}.scores".format(RANKER_NAMES[args.ranker],**args.__dict__)
         os.system(cmd_reeval)
         create_ranking(args)
         total_time = time.time() - init
