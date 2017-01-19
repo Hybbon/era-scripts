@@ -85,7 +85,6 @@ def create_ranking(args):
 
     cmd = "python create_ranking_from_scores.py -map {base_dir}/reeval/{part}.train.map -scores {out_dir}{ranklib_tmp}{part}-{0}.scores -o {out_dir}{part}-{0}.out".format(RANKER_NAMES[args.ranker],**args.__dict__)
     print(cmd)
-    a = input()
     os.system(cmd)
 
 
