@@ -36,7 +36,8 @@ def parse_args():
     p.add_argument("-ranklib_tmp",type=str,default="ranklib_tmp/")
     p.add_argument("-converted",action="store_true",
             help="When set indicates that the conversion to the LETOR format is already done")
-
+    p.add_argument("-pini",type=int,default=1)
+    p.add_argument("-pend",type=int,default=5)
     p.add_argument("-Xmx",type=int,default=10)
 
     return p.parse_args()
@@ -63,7 +64,7 @@ def run_ranklib(args):
 
     timestamp = open(os.path.join(args.out_dir,args.ranklib_tmp,"timestamp"),'w')    
 
-    partitions = ["u"+str(i) for i in range(1,6)]
+    partitions = ["u"+str(i) for i in range(args.pini,args.pend+1)]
     for part in partitions:
         args.part = part
         init = time.time()
