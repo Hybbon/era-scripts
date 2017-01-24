@@ -48,7 +48,7 @@ def parse_args():
 def convert_datasets(args):
 
     #construct the datasets
-    partitions = ["u"+str(i) for i in range(1,6)]
+    partitions = ["u"+str(i) for i in range(args.pini,args.pend+1)]
     for part in partitions:
         cmd = "python convert_to_letor_format.py -data_folder " +args.base_dir+"/classif/" +" -p "+part
         os.system(cmd)
@@ -94,6 +94,7 @@ if __name__ == "__main__":
 
     args = parse_args()
     if not args.converted:
+        print("Converting DATASETS")
         convert_datasets(args)
     run_ranklib(args)
     
