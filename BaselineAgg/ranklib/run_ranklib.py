@@ -92,7 +92,7 @@ def run_ranklib(args):
             create_ranking(args,run)
             total_time = time.time() - init
 
-            timestamp.write(part +"."+str(run)":" + str(total_time)+"\n")
+            timestamp.write(part +"."+str(run)+":" + str(total_time)+"\n")
             timestamp.flush()
 
         timestamp.close()
