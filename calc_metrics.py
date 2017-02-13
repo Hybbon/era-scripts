@@ -11,10 +11,8 @@ import glob
 import sys
 
 
-'''
-rank_comm : Recommended list
+'''rank_comm : Recommended list
 test : list with the items the user already seen
-
 '''
 def weighted_precision_at(rank_recomm, test,num_items_to_eval):
     hits = 0.0
@@ -109,8 +107,8 @@ def MAP(agg_rankings, test_inputs,size_at=10):
 
     
 
-    print "Num users test "+str(num_users_test_has_elem) +" - "+ str(map_value/num_users_test_has_elem)
-    print "Num users " + str(len(agg_rankings))
+    #print "Num users test "+str(num_users_test_has_elem) +" - "+ str(map_value/num_users_test_has_elem)
+    #print "Num users " + str(len(agg_rankings))
 
     map_value = map_value/len(agg_rankings)
 
@@ -210,7 +208,7 @@ def run(basedir):
         files = sorted(glob.glob(basedir+partition+"*.out"))    
         test = read_test(basedir+partition+'.test')
 
-        print files
+       # print files
         print "\t\t\tmap@10\tp@1\tp@5\tp@10\tNDCG\thits\tavg hits"
         for f in files:
             data = read_ranking(f)
