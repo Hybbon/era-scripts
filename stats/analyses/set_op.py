@@ -36,7 +36,7 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
         algs = new_algs
 
     #TODO Conferir possivel causador de estouro de memoria
-    #tuples = [] 
+    tuples = [] 
     
 
     alg_res_list = list(algs.values())
