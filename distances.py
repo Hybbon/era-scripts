@@ -38,6 +38,7 @@ import os.path
 import multiprocessing as mp
 import stats.metrics
 from stats.file_input import rankings_dict
+import ipdb
 
 logger = logging.getLogger()
 
@@ -79,16 +80,34 @@ def distance_matrix_users(algs, function,algs_to_compare = [], num_processes=1):
                  
     return distances
 
+#TODO continuar a modificacao para calcular distancis dos from_algs
+def distance_matrix(algs, function, num_processes,users_to_use=[], from_algs=None):
+    """Generates pairwise distance matrix according to a distance function
+        Algorithms order in the distance matrix is alphabetically ordered
 
-def distance_matrix(algs, function, num_processes,users_to_use=[]):
-    """Generates pairwise distance matrix according to a distance function"""
+        We can use from_algs when we want to compute the distance between two 
+        distinct sets of algorithms
+"""
+    ipdb.set_trace()
     alg_index = {alg: i for i, alg in enumerate(sorted(algs.keys()))}
-    distances = np.ndarray((len(algs), len(algs)), dtype=float)
+    if from_algs:
+        alg_index.update({alg: i for i, alg in enumerate(sorted(from_algs.keys()))})
+        distances = np.ndarray((len(from_algs), len(algs)), dtype=float)
+        algs_iterator = itertools.product(from_algs.keys(),algs.keys())
+    else:
+        distances = np.ndarray((len(algs), len(algs)), dtype=float)       
+        algs_iterator = itertools.product(algs.keys(), repeat=2)
 
-    for alg1, alg2 in itertools.product(algs.keys(), repeat=2):
+    ipdb.set_trace()
+    for alg1, alg2 in algs_iterator:
         logger.warn("Comparing {} to {} via {}".format(alg1, alg2,
                                                        function.__name__))
-        rankings1, rankings2 = algs[alg1], algs[alg2]
+
+        if from_algs:
+            rankings1, rankings2 = from_algs[alg1], algs[alg2]
+        else:        
+            rankings1, rankings2 = algs[alg1], algs[alg2]
+
         #checking if we will use the complete set of users of just a sub set of them
         if len(users_to_use) == 0:
             user_rankings = [(rankings1[user], rankings2[user])

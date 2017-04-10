@@ -74,7 +74,7 @@ def dcg(rank, size_at):
 def NDCG(agg_rankings, test_inputs,size_at=10):
     ndcg_value = 0.0
     for key in agg_rankings.keys():
-        if agg_rankings.has_key(key) and test_inputs.has_key(key):
+        if key in agg_rankings and key in test_inputs :
             #print "user: " + str(key)
             hits_and_ratings = get_hits_and_ratings(agg_rankings[key], test_inputs[key],size_at)
 
@@ -99,7 +99,7 @@ def MAP(agg_rankings, test_inputs,size_at=10):
     map_value = 0.0
     num_users_test_has_elem = 0
     for key in agg_rankings.keys():
-        if agg_rankings.has_key(key) and test_inputs.has_key(key):
+        if key in agg_rankings and key in test_inputs:
             #print "user: " + str(key)
             map_value += weighted_precision_at(agg_rankings[key],test_inputs[key],size_at)
             num_users_test_has_elem += 1
@@ -130,7 +130,7 @@ def hits_statistics(agg_rankings, test_inputs,size_at=10):
     hits_total = 0.0
     hits_avg = 0.0
     for key in agg_rankings.keys():
-        if agg_rankings.has_key(key) and test_inputs.has_key(key):
+        if key in agg_rankings and key in test_inputs:
 
             for i in range(size_at):
                 kx = agg_rankings[key][i] #cada linha tem um item e o score da regressao
@@ -148,7 +148,7 @@ def avg_precision_at(agg_rankings, test_inputs,size_at=10):
 
     prec_value = 0.0
     for key in agg_rankings.keys():
-        if agg_rankings.has_key(key) and test_inputs.has_key(key):
+        if key in agg_rankings and key in test_inputs:
             #print "user: " + str(key)
             prec_value += precision_at(agg_rankings[key],test_inputs[key],size_at)
 
@@ -209,7 +209,7 @@ def run(basedir):
         test = read_test(basedir+partition+'.test')
 
        # print files
-        print "\t\t\tmap@10\tp@1\tp@5\tp@10\tNDCG\thits\tavg hits"
+        print("\t\t\tmap@10\tp@1\tp@5\tp@10\tNDCG\thits\tavg hits")
         for f in files:
             data = read_ranking(f)
             map10 = MAP(data,test,10)
@@ -218,7 +218,7 @@ def run(basedir):
             p10 = avg_precision_at(data,test,10)
             ndcg10 = NDCG(data,test,10)
             total_hits,avg_hits = hits_statistics(data,test,10)
-            print str(f)+"\t\t\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f" %(map10,p1,p5,p10,ndcg10,total_hits,avg_hits)
+            print(str(f)+"\t\t\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f" %(map10,p1,p5,p10,ndcg10,total_hits,avg_hits))
 
 
         
