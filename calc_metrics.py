@@ -20,6 +20,7 @@ def weighted_precision_at(rank_recomm, test,num_items_to_eval):
     #print rank_recomm
     #print test
     #Considerando somente os 100 primeiros
+    num_items_to_eval = min(num_items_to_eval,len(rank_recomm))
     for i in range(num_items_to_eval):
         kx = rank_recomm[i] #cada linha tem um item e o score da regressao
         kx_in_test = [True for item_rat in test if item_rat[0] == kx] 
@@ -43,8 +44,12 @@ def precision_at(rank_recomm, test,num_items_to_eval):
     #print rank_recomm
     #print test
     #Considerando somente os 100 primeiros
+    num_items_to_eval = min(num_items_to_eval,len(rank_recomm)) #garante o funcionamento com usuarios de ranking menor
+    #print "There are users with rankings with lower size than the default"
     for i in range(num_items_to_eval):
-        kx = rank_recomm[i] #cada linha tem um item e o score da regressao
+        kx = rank_recomm[i] #cada linha tem um item e o score da regressao      
+            #print rank_recomm
+            #print num_items_to_eval
         kx_in_test = [True for item_rat in test if item_rat[0] == kx] 
         if len(kx_in_test) > 0:
             hits = hits+1;
@@ -74,7 +79,7 @@ def dcg(rank, size_at):
 def NDCG(agg_rankings, test_inputs,size_at=10):
     ndcg_value = 0.0
     for key in agg_rankings.keys():
-        if key in agg_rankings and key in test_inputs :
+        if key in agg_rankings and key in test_inputs:
             #print "user: " + str(key)
             hits_and_ratings = get_hits_and_ratings(agg_rankings[key], test_inputs[key],size_at)
 
@@ -117,6 +122,8 @@ def MAP(agg_rankings, test_inputs,size_at=10):
 
 def get_hits_and_ratings(rank_recomm, test,size_at):
     hits_and_ratings = []
+
+    size_at = min(len(rank_recomm),size_at)
     for i in range(size_at):
         kx = rank_recomm[i] #cada linha tem um item e o score da regressao
         for item_rat in test:
@@ -131,7 +138,7 @@ def hits_statistics(agg_rankings, test_inputs,size_at=10):
     hits_avg = 0.0
     for key in agg_rankings.keys():
         if key in agg_rankings and key in test_inputs:
-
+            size_at = min(size_at,len(agg_rankings[key]))
             for i in range(size_at):
                 kx = agg_rankings[key][i] #cada linha tem um item e o score da regressao
                 kx_in_test = [True for item_rat in test_inputs[key] if item_rat[0] == kx] 
@@ -202,14 +209,15 @@ def read_test(test_file):
 
 
 def run(basedir):
-
+#if __name__ == "__main__":
+    basedir = sys.argv[1]
     for part in range(1,6):
         partition = "u"+str(part)
         files = sorted(glob.glob(basedir+partition+"*.out"))    
         test = read_test(basedir+partition+'.test')
 
        # print files
-        print("\t\t\tmap@10\tp@1\tp@5\tp@10\tNDCG\thits\tavg hits")
+        print "\t\t\tmap@10\tp@1\tp@5\tp@10\tNDCG\thits\tavg hits"
         for f in files:
             data = read_ranking(f)
             map10 = MAP(data,test,10)
@@ -218,7 +226,7 @@ def run(basedir):
             p10 = avg_precision_at(data,test,10)
             ndcg10 = NDCG(data,test,10)
             total_hits,avg_hits = hits_statistics(data,test,10)
-            print(str(f)+"\t\t\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f" %(map10,p1,p5,p10,ndcg10,total_hits,avg_hits))
+            print str(f)+"\t\t\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f" %(map10,p1,p5,p10,ndcg10,total_hits,avg_hits)
 
 
         
