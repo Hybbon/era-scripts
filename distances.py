@@ -88,7 +88,7 @@ def distance_matrix(algs, function, num_processes,users_to_use=[], from_algs=Non
         We can use from_algs when we want to compute the distance between two 
         distinct sets of algorithms
 """
-    ipdb.set_trace()
+    #ipdb.set_trace()
     alg_index = {alg: i for i, alg in enumerate(sorted(algs.keys()))}
     if from_algs:
         alg_index.update({alg: i for i, alg in enumerate(sorted(from_algs.keys()))})
@@ -98,7 +98,7 @@ def distance_matrix(algs, function, num_processes,users_to_use=[], from_algs=Non
         distances = np.ndarray((len(algs), len(algs)), dtype=float)       
         algs_iterator = itertools.product(algs.keys(), repeat=2)
 
-    ipdb.set_trace()
+    #ipdb.set_trace()
     for alg1, alg2 in algs_iterator:
         logger.warn("Comparing {} to {} via {}".format(alg1, alg2,
                                                        function.__name__))
