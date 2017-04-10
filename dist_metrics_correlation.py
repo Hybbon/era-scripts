@@ -14,7 +14,7 @@ def parse_args():
     """Parses command line parameters through argparse and returns parsed args.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("files", nargs="+",
+    parser.add_argument("--basedir",type=str,
                         help="ranking files to be compared.")
 
     parser.add_argument("--agg_files", type=str,
@@ -42,13 +42,19 @@ COLORS = ["b","r","g","p"]
 if __name__ == "__main__":
 
     args = parse_args()
+
+    print("1111")
+    if not os.path.isdir(args.output):
+        os.mkdir(args.output)
+    print("2222")
+
     color_iter = iter(COLORS) #CHANGE TO A COLORMAP
 
-    #files = sorted(glob.glob(os.path.join(basedir,partition+"*.out")))
-    test_file = os.path.dirname(args.files[0])
-    test_file = calc_metrics.read_test(os.path.join(test_file,"u1.test"))
+    files = sorted(glob.glob(os.path.join(args.basedir,args.part+"*.out")))
+    test_file = os.path.dirname(files[0])
+    test_file = calc_metrics.read_test(os.path.join(test_file,args.part+".test"))
 
-    algs = dist.load_algs(args.files,10)
+    algs = dist.load_algs(files,10)
     sorted_algs_recomm = sorted(algs.keys())
     distance_matrix_recomm = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=4)
 
@@ -99,7 +105,7 @@ if __name__ == "__main__":
     plt.ylabel("MAP")
     plt.xlim(0.4,1)
     plt.ylim(0,0.4)
-    plt.savefig("dist_metrics_from_agg.png")
+    plt.savefig(os.path.join(args.output,"dist_metrics_from_agg.png"))
     plt.close()
 
 
