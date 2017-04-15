@@ -5,7 +5,7 @@ import time
 import argparse
 import convert_to_letor_format as conversion
 import create_ranking_from_scores as rank_creator
-
+import ../../calc_metrics as 
 
 
 
@@ -81,11 +81,29 @@ def run_ranklib(args):
 
 
 
-def create_ranking(args):    
+def create_ranking(args,reeval=False,reeval_ranklib_dir=""):    
 
-    cmd = "python create_ranking_from_scores.py -map {base_dir}/reeval/{part}.train.map -scores {out_dir}{ranklib_tmp}{part}-{0}.scores -o {out_dir}{part}-{0}.out".format(RANKER_NAMES[args.ranker],**args.__dict__)
-    print(cmd)
-    os.system(cmd)
+    if reeval:
+        cmd = "python create_ranking_from_scores.py -map {base_dir}/{part}.train.map -scores {out_dir}{1}{part}-{0}.scores -o {out_dir}{1}{part}-{0}.out".format(RANKER_NAMES[args.ranker],reeval_ranklib_dir,**args.__dict__)
+    else:
+        cmd = "python create_ranking_from_scores.py -map {base_dir}/reeval/{part}.train.map -scores {out_dir}{ranklib_tmp}{part}-{0}.scores -o {out_dir}{part}-{0}.out".format(RANKER_NAMES[args.ranker],**args.__dict__)
+        os.system(cmd)
+
+
+
+def select_best_model(args):
+
+    
+    reeval_ranklib_dir = os.path.join(part.ranklib_tmp,'reeval')
+    os.path.mkdir(reeval_ranklinb_dir)
+    
+    partitions = ["u"+str(i) for i in range(1,6)]    
+    for part in partitions:
+        args.part = part
+        cmd_reeval = "java -Xmx{Xmx}g -jar {ranklib} -load {out_dir}{ranklib_tmp}{part}-{0}_model.txt -rank {base_dir}/{part}.train.letor -score {out_dir}{1}{part}-{0}.scores".format(RANKER_NAMES[args.ranker],reeval_ranklib_dir,**args.__dict__)
+        os.system(cmd_reeval)
+        create_ranking(args)
+        
 
 
 
