@@ -8,8 +8,10 @@ import numpy as np
 import pandas as pd
 from itertools import combinations
 from ..plotting import plot_bar_chart, plot_all_and_hits, plot_frame_histogram
+import ipdb
 
 
+#TODO corrigir para trabalhar com multiplos slices vindos do arquivo de config
 def set_operation_stats(algs, begin=0, end=None, hits=None):
     """Computes avg. intersection length for Rankings.
 
@@ -34,19 +36,29 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
         algs = new_algs
 
     #TODO Conferir possivel causador de estouro de memoria
-    tuples = []
+    tuples = [] 
+    
 
     alg_res_list = list(algs.values())
     #comb_lengths = range(1, len(algs) + 1)
     comb_lengths = range(1, 5 + 1)
+    tuples_aux = []
+
 
     avg_isect_len_per_r = []
     for r in comb_lengths:
+        #ipdb.set_trace()
+        #tuples_aux ja vai armazenar as contagens de agreement
+        #tem uma entrada de dicionario para cada tamanho de intercessao possivel
+        tuples_aux.append({x:0 for x in range(11)})
         isect_lenghts = []
         # Iterates through combinations of size r
         for comb in combinations(range(len(alg_res_list)), r):
+            #ipdb.set_trace()
             # Performs the intersection between the items in the combination
-            isect = alg_res_list[comb[0]]
+            #armazena os rankings recomendados para todos os usuarios para o primeiro algoritmo
+            isect = alg_res_list[comb[0]] 
+            #faz a intecessao entre todos os rankings recomendados pelos demais algoritmos
             for i in comb[1:]:
                 #the operator & is a alias to the intersection operator defined in the class Algresults
                 isect &= alg_res_list[i] 
@@ -54,13 +66,15 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
                 isect &= hits
 
             for user_id, ranking in isect.lists.items():
+
+                tuples_aux[-1][len(ranking)] += 1
                 tuples.append((
                     r,
                     user_id,
                     len(ranking),
                     comb
                 ))
-            
+            #ipdb.set_trace()
             avg_isect_len = isect.avg_len()
             isect_lenghts.append(avg_isect_len)            
         avg_isect_len_per_r.append(sum(isect_lenghts) / len(isect_lenghts))
@@ -70,7 +84,7 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
     col_names = ("comb_length", "user_id", "isect_size", "comb")
     frame = pd.DataFrame.from_records(tuples, columns=col_names)
 
-    return avg_isect_len_per_r, frame
+    return avg_isect_len_per_r, frame, tuples_aux
 
 
 def print_hits_per_alg(algs, hits):
@@ -133,7 +147,8 @@ def generate(dsr, results, conf):
         for label in labels
     }
     frames_all, frames_hits = {}, {}
-
+    frames_all_aux, frames_hits_aux = {}, {}
+    
     for p_i, (p, part) in enumerate(dsr.parts.items()):
         algs, hits = part.algs, part.hits
 
@@ -142,12 +157,15 @@ def generate(dsr, results, conf):
         print()
 
         for s_i, s in enumerate(slices):
-            res['isect_all'][s_i, p_i, :], frame_all = (
+            res['isect_all'][s_i, p_i, :], frame_all, frame_all_aux = (
                 set_operation_stats(algs, *s))
             frames_all[s] = frame_all
-            res['isect_hits'][s_i, p_i, :], frame_hits = (
+            frames_all_aux[s] = frame_all_aux
+
+            res['isect_hits'][s_i, p_i, :], frame_hits, frame_hits_aux = (
                 set_operation_stats(algs, *s, hits=hits))
             frames_hits[s] = frame_hits
+            frames_hits_aux[s] = frame_hits_aux
 
     def avg(iterable):
         return sum(iterable) / len(iterable)
@@ -163,16 +181,45 @@ def generate(dsr, results, conf):
         for label in labels
     }
 
-    best_comb = find_best_combinations(frame_hits)
+    #best_comb = find_best_combinations(frame_hits)
 
-    frames_all = {s: (isect_histogram_frame(f, best_comb),
-                      isect_histogram_frame(f))
+
+    #-------converte o dict que salvou os results num dataframe----------------
+    frames_all_aux = convert_from_dictionary_to_dataframe(frames_all_aux)
+    frames_hits_aux = convert_from_dictionary_to_dataframe(frames_hits_aux)
+    #--------------------------------------------------------------------------
+
+
+    #ipdb.set_trace()
+    #frames_all = {s: (isect_histogram_frame(f, best_comb),
+    frames_all = {s: (isect_histogram_frame(f))
                   for s, f in frames_all.items()}
-    frames_hits = {s: (isect_histogram_frame(f, best_comb),
-                       isect_histogram_frame(f))
+    #frames_hits = {s: (isect_histogram_frame(f, best_comb),
+    frames_hits = {s:(isect_histogram_frame(f))
                    for s, f in frames_hits.items()}
+    #ipdb.set_trace()
 
-    return res_avg, frames_all, frames_hits
+    
+    return res_avg, frames_all_aux, frames_hits_aux
+
+
+#TODO continuar daqui
+def convert_from_dictionary_to_dataframe(dict_to_convert):
+    col_names = ("comb_length", "isect_size", "count")
+    #ipdb.set_trace()
+    tuples_aux = []
+    tuples_hits_aux = []
+    for slices_setop in dict_to_convert:
+        for comb_size,comb_size_dict in enumerate(dict_to_convert[slices_setop]):
+            for agree_size in sorted(comb_size_dict.keys()):
+                if comb_size_dict[agree_size] > 0:
+                    tuples_aux.append((comb_size+1,agree_size,comb_size_dict[agree_size]))
+                    
+    
+        dict_to_convert[slices_setop] = pd.DataFrame.from_records(tuples_aux, columns=col_names)
+
+    return dict_to_convert
+    
 
 
 def normalize_by_num_users(frame):
@@ -200,15 +247,17 @@ def plot(res_tuple, dsr, output_dir, conf, ext='pdf'):
         isect_all = res_avg['isect_all'][s]
         isect_hits = res_avg['isect_hits'][s]
 
-        frame_all_best, frame_all_mean = frames_all[s]
-        frame_hits_best, frame_hits_mean = frames_hits[s]
+        #frame_all_best, 
+        frame_all_mean = frames_all[s]
+        #frame_hits_best, 
+        frame_hits_mean = frames_hits[s]
 
-        frame_all_best = frame_all_best[frame_all_best.comb_length > 1]
+        #frame_all_best = frame_all_best[frame_all_best.comb_length > 1]
         frame_all_mean = frame_all_mean[frame_all_mean.comb_length > 1]
 
-        frame_all_best = normalize_by_num_users(frame_all_best)
+        #frame_all_best = normalize_by_num_users(frame_all_best)
         frame_all_mean = normalize_by_num_users(frame_all_mean)
-        frame_hits_best = normalize_by_num_users(frame_hits_best)
+        #frame_hits_best = normalize_by_num_users(frame_hits_best)
         frame_hits_mean = normalize_by_num_users(frame_hits_mean)
 
         # plot_bar_chart(os.path.join(slice_dir, 'isect_all.{0}'.format(ext)),
@@ -237,21 +286,21 @@ def plot(res_tuple, dsr, output_dir, conf, ext='pdf'):
                           "Combination size (k)", comb_lengths,
                           "Avg. items in common", isect_all_by_size, isect_hits_by_size)
 
-        plot_frame_histogram(os.path.join(slice_dir,
-                                          'hist_all_best.{0}'.format(ext)),
-                             "Number\nof items",
-                             "Number of methods in agreement",
-                             "Users (%)", frame_all_best)
+        #plot_frame_histogram(os.path.join(slice_dir,
+        #                                  'hist_all_best.{0}'.format(ext)),
+        #                     "Number\nof items",
+        #                     "Number of methods in agreement",
+        #                     "Users (%)", frame_all_best)
         plot_frame_histogram(os.path.join(slice_dir,
                                           'hist_all_mean.{0}'.format(ext)),
                              "Number\nof items",
                              "Number of methods in agreement",
                              "Users (%)", frame_all_mean)
-        plot_frame_histogram(os.path.join(slice_dir,
-                                          'hist_hits_best.{0}'.format(ext)),
-                             "Number\nof items",
-                             "Number of methods in agreement",
-                             "Users (%)", frame_hits_best)
+        #plot_frame_histogram(os.path.join(slice_dir,
+        #                                  'hist_hits_best.{0}'.format(ext)),
+        #                     "Number\nof items",
+        #                     "Number of methods in agreement",
+        #                     "Users (%)", frame_hits_best)
         plot_frame_histogram(os.path.join(slice_dir,
                                           'hist_hits_mean.{0}'.format(ext)),
                              "Number\nof items",

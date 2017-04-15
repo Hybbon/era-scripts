@@ -82,7 +82,9 @@ import os.path
 import argparse
 import stats.aux as aux
 import logging
+import ipdb
 from datetime import datetime
+
 
 
 def parse_args():
@@ -156,7 +158,6 @@ def main():
     if args.list:
         list_results(results)
         return True
-
     results = gen_modules(stats.modules, args, dsr, conf, results)
 
     aux.save_results(pickle_path, results)
