@@ -1,3 +1,0 @@
-Dataset: ./../../../datasets/ml-100k/u4.base
-With Setup: test-set -f ./../../../datasets/ml-100k/u4.test --rand-seed 1 --test-view all
-Dataset: ./../../../datasets/ml-100k/u4.test

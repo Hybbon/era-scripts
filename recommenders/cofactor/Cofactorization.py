@@ -289,10 +289,10 @@ def run(kwargs):
 
 
     
-    print 'Test Recall@20: %.4f' % rec_eval.recall_at_k(train_data, test_data, U, V, k=20, vad_data=vad_data)
-    print 'Test Recall@50: %.4f' % rec_eval.recall_at_k(train_data, test_data, U, V, k=50, vad_data=vad_data)
-    print 'Test NDCG@100: %.4f' % rec_eval.normalized_dcg_at_k(train_data, test_data, U, V, k=100, vad_data=vad_data)
-    print 'Test MAP@100: %.4f' % rec_eval.map_at_k(train_data, test_data, U, V, k=10, vad_data=vad_data)
+    #print 'Test Recall@20: %.4f' % rec_eval.recall_at_k(train_data, test_data, U, V, k=20, vad_data=vad_data)
+    #print 'Test Recall@50: %.4f' % rec_eval.recall_at_k(train_data, test_data, U, V, k=50, vad_data=vad_data)
+    #print 'Test NDCG@100: %.4f' % rec_eval.normalized_dcg_at_k(train_data, test_data, U, V, k=100, vad_data=vad_data)
+    #print 'Test MAP@100: %.4f' % rec_eval.map_at_k(train_data, test_data, U, V, k=10, vad_data=vad_data)
 
     save_predictions(train_data,test_data, U, V.T, slice(0,len(unique_uid),None),unique_uid, unique_sid,output_f = os.path.join(kwargs.output_dir,kwargs.part+'-CoFactor.out'),DATA_DIR=DATA_DIR)
     cmd = "rm {0}*.npy".format(os.path.join(dir_predix,kwargs.part))

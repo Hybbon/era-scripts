@@ -31,8 +31,8 @@ def weighted_precision_at(rank_recomm, test,num_items_to_eval):
     #print "hits: " + str(hits) + "avg_prec: " +str(avg_prec)
     #a = input()
     if  hits != 0:
-        prec = avg_prec/min(len(test),num_items_to_eval)                
-        return prec
+        precision = avg_prec/min(len(test),num_items_to_eval)                
+        return precision
     else:
 
         return 0
