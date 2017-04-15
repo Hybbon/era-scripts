@@ -8,8 +8,6 @@ import create_ranking_from_scores as rank_creator
 
 
 
-
-
 RANKER_NAMES = {0: "MART", 
                 1: "RankNet", 
                 2: "RankBoost", 
