@@ -38,6 +38,7 @@ def parse_args():
 
 
 COLORS = ["b","r","g","p"]
+SYMBOLS = ["o","v","s","^"]
 
 if __name__ == "__main__":
 
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     if not os.path.isdir(args.output):
         os.mkdir(args.output)
     print("2222")
-
+    symbol_iter = iter(SYMBOLS)
     color_iter = iter(COLORS) #CHANGE TO A COLORMAP
 
     files = sorted(glob.glob(os.path.join(args.basedir,args.part+"*.out")))
@@ -64,49 +65,59 @@ if __name__ == "__main__":
     x_max = max(mean_distance_recomm)
     y_min = min(map_values_recomm)
  
-    recomm_algs_plt = plt.scatter(mean_distance_recomm, map_values_recomm, color=next(color_iter))
+    recomm_algs_plt = plt.scatter(mean_distance_recomm, map_values_recomm, color=next(color_iter), marker=next(symbol_iter),label="Recomm. Alg")
 
-    #plt.savefig("dist_metrics_scatter.png")
+    plt.legend(scatterpoints=1)
+    plt.xlabel("Ranking average distance")
+    plt.ylabel("MAP")
+    plt.xlim(0.4,1)
+    plt.ylim(0,0.4)	
+    plt.savefig(os.path.join(args.output,"dist_metrics_scatter_recomm.png"))
     #plt.close()
 
 
 
     #--------------------------------------------------------------------------
-
-    nested_folders = glob.glob(os.path.join(args.agg_files,"*/"))
     agg_plots = []
     folder_names = []
+    nested_folders = []
 
-    if len(nested_folders) == 0:
-        nested_folders = glob.glob(args.agg_files)
+    if args.agg_files:
+        #recomm_algs_plt = plt.scatter(mean_distance_recomm, map_values_recomm, color=next(color_iter), marker=next(symbol_iter))
+        nested_folders = glob.glob(os.path.join(args.agg_files,"*/"))
+    
+        if len(nested_folders) == 0:
+            nested_folders = glob.glob(args.agg_files)
 
-    for folder in nested_folders:
-        algs_to_compare = glob.glob(os.path.join(folder,args.part+"*.out"))
+        nested_folders = sorted(nested_folders)
 
-        from_algs = dist.load_algs(algs_to_compare,10)
-        sorted_from_algs = sorted(from_algs.keys())
-        distance_matrix_agg = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=4,from_algs=from_algs)
-        mean_distance_agg = [np.average(distance_matrix_agg[i]) for i in range(len(distance_matrix_agg))]
-        #TODO alterar
-        map_values_agg = [calc_metrics.MAP(from_algs[alg],test_file) for alg in sorted_from_algs]
+        for folder in nested_folders:
+            algs_to_compare = glob.glob(os.path.join(folder,args.part+"*.out"))
+
+            from_algs = dist.load_algs(algs_to_compare,10)
+            sorted_from_algs = sorted(from_algs.keys())
+            distance_matrix_agg = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=4,from_algs=from_algs)
+            mean_distance_agg = [np.average(distance_matrix_agg[i]) for i in range(len(distance_matrix_agg))]
+            #TODO alterar
+            map_values_agg = [calc_metrics.MAP(from_algs[alg],test_file) for alg in sorted_from_algs]
      
     
-        #y_max = max(map_values_agg)
+            #y_max = max(map_values_agg)
 
-        agg_plots.append(plt.scatter(mean_distance_agg, map_values_agg,color = next(color_iter)))
-        folder_names.append(folder.strip().split("/")[-2])
+            agg_plots.append(plt.scatter(mean_distance_agg, map_values_agg,color = next(color_iter), marker = next(symbol_iter)))
+            folder_names.append(folder.strip().split("/")[-2].replace("_",". "))
 
 
-    folder_names.append("Recomm. Algs")
-    agg_plots.append(recomm_algs_plt)
+        folder_names.append("Recomm. Algs")
+        agg_plots.append(recomm_algs_plt)
 
-    plt.legend(tuple(agg_plots),tuple(folder_names),scatterpoints=1)
-    plt.xlabel("Ranking average distance")
-    plt.ylabel("MAP")
-    plt.xlim(0.4,1)
-    plt.ylim(0,0.4)
-    plt.savefig(os.path.join(args.output,"dist_metrics_from_agg.png"))
-    plt.close()
+        plt.legend(tuple(agg_plots),tuple(folder_names),scatterpoints=1)
+        plt.xlabel("Ranking average distance")
+        plt.ylabel("MAP")
+        plt.xlim(0.4,1)
+        plt.ylim(0,0.4)
+        plt.savefig(os.path.join(args.output,"dist_metrics_from_agg.png"))
+        plt.close()
 
 
 

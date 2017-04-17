@@ -38,7 +38,7 @@ import os.path
 import multiprocessing as mp
 import stats.metrics
 from stats.file_input import rankings_dict
-import ipdb
+#import ipdb
 
 logger = logging.getLogger()
 

@@ -217,7 +217,7 @@ def run(basedir):
         test = read_test(basedir+partition+'.test')
 
        # print files
-        print "\t\t\tmap@10\tp@1\tp@5\tp@10\tNDCG\thits\tavg hits"
+        print("\t\t\tmap@10\tp@1\tp@5\tp@10\tNDCG\thits\tavg hits")
         for f in files:
             data = read_ranking(f)
             map10 = MAP(data,test,10)
@@ -226,7 +226,7 @@ def run(basedir):
             p10 = avg_precision_at(data,test,10)
             ndcg10 = NDCG(data,test,10)
             total_hits,avg_hits = hits_statistics(data,test,10)
-            print str(f)+"\t\t\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f" %(map10,p1,p5,p10,ndcg10,total_hits,avg_hits)
+            print(str(f)+"\t\t\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f" %(map10,p1,p5,p10,ndcg10,total_hits,avg_hits))
 
 
         
