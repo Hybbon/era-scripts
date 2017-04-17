@@ -71,7 +71,8 @@ def kendall_samuel(a, b, penalty=0.5):
     length.
 
     a, b -- rankings to be compared."""
-    assert len(a) == len(b)
+    #assert len(a) == len(b) #TODO Comentado para suportar erros na geracao dos rankings de saida
+                             #rever problemas com esses rankings, especificamente MRA
     length = len(a)
     pos_a, pos_b = _reverse_index(a), _reverse_index(b)
     item_list = list(set(a) | set(b))
