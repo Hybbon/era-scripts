@@ -32,9 +32,11 @@ it via ``-c <location>`` flag. To see all possible locations, use the
 import argparse
 import os.path
 import re
+import ipdb
 
 BUSINESS_FILENAME = "yelp_academic_dataset_business.json"
 REVIEW_FILENAME = "yelp_academic_dataset_review.json"
+USERS_FILENAME = "yelp_academic_dataset_user.json"
 
 
 def parse_args():
@@ -51,7 +53,9 @@ def parse_args():
 
 
 def tag_content(json, tag):
-    needle = '"{tag}": "'.format(tag=tag)
+    needle = '"{tag}":"'.format(tag=tag)
+    #ipdb.set_trace()
+    json = json.replace(" ","")
     match = json.find(needle)
     if match == -1:
         return None
@@ -61,11 +65,15 @@ def tag_content(json, tag):
 
 
 def list_cities(business_path):
-    cities = set()
+    cities = {}#set()
     for line_no, business in enumerate(open(business_path), start=1):
         match = tag_content(business, "city")
         if match:
-            cities.add(match)
+            if match in cities:
+                cities[match] += 1
+            else:
+                cities[match] = 1
+            #cities.add(match)
         else:
             print("WARNING: Business in line {} has no city".format(line_no))
     return cities
@@ -75,6 +83,7 @@ def businesses_in_city(business_path, city):
     businesses = []
     for line_no, business in enumerate(open(business_path), start=1):
         match = tag_content(business, "city")
+        #ipdb.set_trace()
         if match:
             if match == city:
                 business_id = tag_content(business, "business_id")
@@ -103,7 +112,8 @@ def main():
     business_path = os.path.join(args.yelp, BUSINESS_FILENAME)
     if args.list_cities:
         cities = list_cities(business_path)
-        for city in cities:
+        sorted_cities = sorted(list(cities.items()),key=lambda tup : tup[1],reverse=True)
+        for city in sorted_cities[:20]:
             print(city)
     else:
         out_path = os.path.join(args.yelp, args.out)
