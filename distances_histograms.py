@@ -339,41 +339,46 @@ if __name__ == '__main__':
 
     headers = ('user_id','item_id','rating')
     ratings = pd.read_csv(os.path.join(basedir,'u1.base'),sep='\t',names=headers)        
-    user_quartiles = generate_users_quartiles(ratings)
+    '''user_quartiles = generate_users_quartiles(ratings)
     lengths = [10,20,30]
 
     alg_names = sorted([os.path.basename(path) for path in args.files])
     alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
 
-    plot_scatter_distances(args,lengths,alg_names,out_dir)
+    plot_scatter_distances(args,lengths,alg_names,out_dir)'''
 
     #plot_scatter_distances()
 
 
     #plt.show()
 
-    
 
-    algs = dist.load_algs(args.files,10)    
-    distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=2)
+    alg_names = sorted([os.path.basename(path) for path in args.files])
+    alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
+
+
+    
+    for size in [10,20]:
+        algs = dist.load_algs(args.files,size)    
+        distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=args.num_processes)
       
 
-    aux_mean = [(i,sum(distance_matrix[i]) / (len(distance_matrix[i]))) 
-            for i in range(len(distance_matrix))]
+        aux_mean = [(i,sum(distance_matrix[i]) / (len(distance_matrix[i]))) 
+                for i in range(len(distance_matrix))]
     
-    aux_mean.sort(key = lambda tup : tup[1])
+        aux_mean.sort(key = lambda tup : tup[1])
 
-    dist_sorted = np.array([distance_matrix[i] for i,val in aux_mean])
-    permutation = [i for i,val in aux_mean]
-    alg_names_sorted = [alg_names[i] for i,val in aux_mean]
+        dist_sorted = np.array([distance_matrix[i] for i,val in aux_mean])
+        permutation = [i for i,val in aux_mean]
+        alg_names_sorted = [alg_names[i] for i,val in aux_mean]
 
 
-    dist_sorted = dist_sorted[:,permutation]
+        dist_sorted = dist_sorted[:,permutation]
 
-    save_distance_matrix(alg_names,distance_matrix,'alg_distances',out_dir)
+        save_distance_matrix(alg_names,distance_matrix,'alg_distances'+str(size),out_dir)
 
-    plot_heatmap(distance_matrix,alg_names,'heatmap.pdf',out_dir=out_dir)
-    plot_heatmap(dist_sorted,alg_names_sorted,'sorted_heatmap.pdf',out_dir=out_dir)
+        plot_heatmap(distance_matrix,alg_names,'heatmap'+str(size)+'.pdf',out_dir=out_dir)
+        plot_heatmap(dist_sorted,alg_names_sorted,'sorted_heatmap'+str(size)+'.pdf',out_dir=out_dir)
 
 
     '''for i,line in enumerate(distance_matrix):
