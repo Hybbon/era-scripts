@@ -24,6 +24,23 @@ from stats.file_input import rankings_dict
 import stats.aux
 
 
+ACRONYMS ={
+        "BPRSLIM":"BPRSLIM",
+        "CofiRank":"Cofi",
+        "FISM_librec":"FISM",
+        "Hybrid_librec":"Hybrid",
+        "ItemKNN":"ItemKNN",
+        "LDA_librec":"LDA",
+        "LeastSquareSLIM":"LSSLIM",
+        "MostPopular":"MP",
+        "MultiCoreBPRMF":"BPRMF",
+        "Poisson":"PF",
+        "RankALS_librec":"RALS",
+        "SoftMarginRankingMF":"SMRMF",
+        "WRMF":"WRMF",
+        "libfm":"libFM"
+}
+
 
 
 '''
@@ -61,6 +78,10 @@ def parse_args():
     
     parser.add_argument("-d","--dist_func",type=str,default="kendall",
                         help="Distance function to be used when comparing the rankings")
+
+    parser.add_argument("--use_previous",action="store_true",
+                        help="Use the previous computed distance instead of computing new ones")
+
     return parser.parse_args()
 
 
@@ -201,14 +222,14 @@ def plot_heatmap(values,alg_names,filename,out_dir='./'):
     # turn off the frame
     ax.set_frame_on(False)
 
-    ax.set_xticklabels(alg_names, minor=False)
-    ax.set_yticklabels(alg_names, minor=False)
+    ax.set_xticklabels(alg_names, minor=False,size='x-large')
+    ax.set_yticklabels(alg_names, minor=False,size='x-large')
     plt.xticks(rotation=90)
 
 
     # Add colorbar, make sure to specify tick locations to match desired ticklabels
     cbar = fig.colorbar(heatmap, ticks=[0,0.25,0.5,0.75,0.99])
-    cbar.ax.set_yticklabels(['0','0.25','0.5','0.75','1'])  # vertically oriented colorbar
+    cbar.ax.set_yticklabels(['0','0.25','0.5','0.75','1'],size='x-large')  # vertically oriented colorbar
 
     plt.savefig(os.path.join(out_dir,filename))
     plt.close()
@@ -352,26 +373,32 @@ if __name__ == '__main__':
 
     #plt.show()
 
-
+    #Load rankings
     alg_names = sorted([os.path.basename(path) for path in args.files])
-    alg_names = [alg_names[i].replace('u1-','').replace('.out','') for i in range(len(alg_names))]
-
+    alg_names = [ACRONYMS[alg_names[i].replace('u1-','').replace('.out','')] 
+                    for i in range(len(alg_names))]
 
     
     for size in [10,20]:
-        algs = dist.load_algs(args.files,size)    
+        algs = dist.load_algs(args.files,size)
+        #Returns the pairwise distance matrix     
         distance_matrix = dist.distance_matrix(algs,dist.kendall_samuel,num_processes=args.num_processes)
       
-
+        #computes the mean distance of each algorithm to the others
+        #this average distance will be used to sort the algorithms in the heatmap
+        #uses an array of pairs [(index,mean_value),(index,mean_value)...]
         aux_mean = [(i,sum(distance_matrix[i]) / (len(distance_matrix[i]))) 
                 for i in range(len(distance_matrix))]
-    
-        aux_mean.sort(key = lambda tup : tup[1])
 
+        #sort the pairs by the mean_value
+        aux_mean.sort(key = lambda tup : tup[1])
+        
+        #reorder the distance matrix        
         dist_sorted = np.array([distance_matrix[i] for i,val in aux_mean])
+        
+        #produces the permutations of the names in order to reflect the sorting
         permutation = [i for i,val in aux_mean]
         alg_names_sorted = [alg_names[i] for i,val in aux_mean]
-
 
         dist_sorted = dist_sorted[:,permutation]
 
