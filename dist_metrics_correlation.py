@@ -1,5 +1,7 @@
 import os
 import sys
+import matplotlib as mpl
+mpl.use("PDF")
 #sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import distances as dist
 import stats.metrics
@@ -65,15 +67,37 @@ if __name__ == "__main__":
     x_max = max(mean_distance_recomm)
     y_min = min(map_values_recomm)
  
-    recomm_algs_plt = plt.scatter(mean_distance_recomm, map_values_recomm, color=next(color_iter), marker=next(symbol_iter),label="Recomm. Alg")
 
-    plt.legend(scatterpoints=1)
-    plt.xlabel("Ranking average distance")
-    plt.ylabel("MAP")
-    plt.xlim(0.4,1)
-    plt.ylim(0,0.4)	
-    plt.savefig(os.path.join(args.output,"dist_metrics_scatter_recomm.png"))
+    fig, ax = plt.subplots()
+    #ax.set_title('Pairwise distances between recommendation algorithms',loc='botton')
+    # Format
+    fig = plt.gcf()
+    #fig.set_size_inches(13, 13)
+    ax.set_axis_bgcolor('white')
+    ax.set_axis_on()
+    #ax.grid(True)
+    
+    plt.axhline(0, color='black')
+    plt.axvline(0.4, color='black')
+    plt.axhline(0.4, color='black')
+    plt.axvline(1, color='black')
+
+    #ax.grid(color='gray',which='major')
+    #ax.tick_params(color='b')
+
+    recomm_algs_plt = ax.scatter(mean_distance_recomm, map_values_recomm, color=next(color_iter), marker=next(symbol_iter),label="Recomm. Alg")
+
+    ax.legend(scatterpoints=1,prop={'size':12})
+    ax.set_xlabel("Ranking average distance",fontsize=12)
+    ax.set_ylabel("MAP",fontsize=12)
+    ax.set_xlim(0.4,1)
+    ax.set_ylim(0,0.4)	
+    plt.savefig(os.path.join(args.output,"dist_metrics_scatter_recomm.pdf"),bbox='tight')
     #plt.close()
+
+    
+
+
 
 
 
@@ -104,24 +128,25 @@ if __name__ == "__main__":
     
             #y_max = max(map_values_agg)
 
-            agg_plots.append(plt.scatter(mean_distance_agg, map_values_agg,color = next(color_iter), marker = next(symbol_iter)))
+            agg_plots.append(ax.scatter(mean_distance_agg, map_values_agg,color = next(color_iter), marker = next(symbol_iter)))
             folder_names.append(folder.strip().split("/")[-2].replace("_",". "))
 
+
+        
+        
 
         folder_names.append("Recomm. Algs")
         agg_plots.append(recomm_algs_plt)
 
-        plt.legend(tuple(agg_plots),tuple(folder_names),scatterpoints=1)
-        plt.xlabel("Ranking average distance")
-        plt.ylabel("MAP")
-        plt.xlim(0.4,1)
-        plt.ylim(0,0.4)
-        plt.savefig(os.path.join(args.output,"dist_metrics_from_agg.png"))
+        ax.legend(tuple(agg_plots),tuple(folder_names),scatterpoints=1,prop={'size':14})
+        ax.set_xlabel("Ranking average distance",fontsize=14)
+        ax.set_ylabel("MAP",fontsize=14)
+        
+        ax.set_xlim(0.4,1)
+        ax.set_ylim(0,0.4)
+        ax.tick_params(axis='both', which='major', labelsize=12, colors='black')
+        plt.savefig(os.path.join(args.output,"dist_metrics_from_agg.pdf"))
         plt.close()
-
-
-
-
     
 
 
