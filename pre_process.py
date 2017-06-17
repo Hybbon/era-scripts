@@ -77,7 +77,7 @@ from collections import namedtuple
 from stats import aux
 import time
 import matplotlib.pyplot as plt
-
+import ipdb
 
 input_headers = ("user_id", "item_id", "rating")#, "timestamp")
 types = {'user_id':np.int32,'item_id':np.int32,'rating':np.float64}#,'timestamp':np.int32}
@@ -337,26 +337,30 @@ def filter_ratings(ratings, min_freq=0.05, min_rating=4, min_cnt=10,
     print(a)   
     plt.savefig('step1.pdf')
     plt.close()'''
-
-    #1) Remove ratings lower than the median of the user's ratings
-    ratings, irrel_ratings = personalized_rating_normalization(ratings,kwargs['fmetric'])
     
-    #ratings = ratings[ratings['rating'] >= min_rating]
-    print("After removal of ratings under {1}: {0}".format(len(ratings),
-                                                           min_rating))
-    process_stats.append(detailed_dataset_stats(ratings))
-    print_dataset_stats(ratings)
+    #when this argument is set we do not remove the ratings lower than a 
+    #threshold. We use this when the pre processed dataset will be used to 
+    #rating prediction instead of ranking prediction
+    if not kwargs['rating_pred']:
+        #1) Remove ratings lower than the median of the user's ratings
+        ratings, irrel_ratings = personalized_rating_normalization(ratings,kwargs['fmetric'])
+        
+        #ratings = ratings[ratings['rating'] >= min_rating]
+        print("After removal of ratings under {1}: {0}".format(len(ratings),
+                                                               min_rating))
+        process_stats.append(detailed_dataset_stats(ratings))
+        print_dataset_stats(ratings)
 
-    users_countings.append([len(ratings[ratings.user_id == x]) for x in uniq_users])
-    '''uniq_users = ratings.user_id.unique()
-    num_ratings_per_user = [len(ratings[ratings.user_id == x]) for x in uniq_users]
-    plt.hist(num_ratings_per_user,bins=75)
-    plt.savefig('step2.pdf')
-    plt.close()'''
+        users_countings.append([len(ratings[ratings.user_id == x]) for x in uniq_users])
+        '''uniq_users = ratings.user_id.unique()
+        num_ratings_per_user = [len(ratings[ratings.user_id == x]) for x in uniq_users]
+        plt.hist(num_ratings_per_user,bins=75)
+        plt.savefig('step2.pdf')
+        plt.close()'''
 
     #2) Remove non-frequent items - 
     #Non-frequent can be defined in absolute or relative values (5% or 10 items, respectively)
-
+    
     if use_abs_rating_counts:
         rating_counts = rating_count_dict(ratings)
         def get_rcounts(x):
@@ -549,6 +553,9 @@ def save_folds(folds, dir_path, validation,use_enum=False,seed_number=0):
 
         save_ratings_file(path.format(i + 1, "test"), fold.test)
         save_ratings_file(path.format(i + 1, "base"), fold.base)
+        #ipdb.set_trace()
+        inflate_andsave_test_for_prediction(fold.base,[],path.format(i + 1, "test_inflated"))
+
         if validation:
             reeval_path = os.path.join(reeval_dir, "u{0}.{1}")
             save_ratings_file(path.format(i + 1, "validation"),
@@ -557,6 +564,72 @@ def save_folds(folds, dir_path, validation,use_enum=False,seed_number=0):
                               fold.baseval)
             save_ratings_file(reeval_path.format(i + 1, "test"),
                               fold.test)
+            inflate_andsave_test_for_prediction(fold.baseval,[],
+                reeval_path.format(i + 1, "test_inflated"))
+
+
+
+#*****************************RATING PREDICTION*********************************
+
+
+
+
+
+
+'''
+Creates a test file containing all items for each user (inflates the test file
+with the items in the train file). This new test will be used to construct a 
+ranking for the users.
+This version uses a list instead of a dict to save the new_test
+'''
+def inflate_andsave_test_for_prediction(train_data,item_list,filename):    
+
+    #new_test = []
+    out = open(filename,'w')
+    #ipdb.set_trace()
+    users_ids = sorted(train_data.user_id.unique())    
+    item_list = train_data.item_id.unique()
+    #users_ids = sorted(train_data.keys())
+    
+    for usr_idx,user in enumerate(users_ids):
+        #new_test.append([])
+        items_to_save = ''
+        for item in item_list:
+            #ipdb.set_trace()
+            if len(train_data[(train_data.user_id==user) & 
+                ( train_data.item_id==item)]) == 0:
+                items_to_save += '{0}\t{1}\t{2}\n'.format(user,item,0)
+                #new_test[-1].append((item,rating))
+    
+        out.write(items_to_save)
+    #return new_test,users_ids
+
+
+'''
+Given a dataset (a rating matrix in movielens format) returns
+'''
+def get_item_list(dataset):
+    itemset = set()
+    for user in dataset.keys():
+        user_items = dataset[user]
+        for item,rating in user_items:            
+            itemset.add((item,0)) #add all items with rating 0
+
+    #just convert to a list, allowing indexing
+    item_list = [x for x in itemset]
+
+    return item_list
+
+
+
+
+
+#**************************END RATING PREDICTION********************************
+
+
+
+
+
 
 
 def detailed_dataset_stats(ratings):
@@ -636,6 +709,10 @@ def parse_args():
              'validation files')
     p.add_argument('-s','--silent', action='store_true',
             help = 'Do not generate statistics')
+    p.add_argument('--rating_pred',action='store_true',
+            help='Set this parameter when you want to construct datasets for ' 
+                  'rating predction. This pre-process do not remove ratings lower '
+                  'than a specified threshold')
     return p.parse_args()
 
 
