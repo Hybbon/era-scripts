@@ -77,6 +77,7 @@ import glob
 import tempfile
 import numpy as np
 import heapq
+import ipdb
 
 from sklearn.model_selection import train_test_split
 
@@ -138,6 +139,9 @@ def parse_args():
     p.add_argument("--libfm_method",type=str,default='mcmc',
         help="Method used to in the optimization step of libfm. save_model will only works with ALS and SGD ")
 
+    p.add_argument("--rating_pred",action='store_true',
+        help="Indicates we should run rating predction instead of ranking prediction")
+
     return p.parse_args()
 
 
@@ -174,27 +178,56 @@ def mml_item_ranking(kwargs):
 
 mml_rp_cmd = ("mono {mml_binary_rp} "
               "--training-file={base} "
-              "--test-file={test} "
+              "--test-file={test}_inflated "
               "--recommender={alg} "
               "--prediction-file={pred_rp_tmp} "
-              "--measures='AUC,prec@5,prec@10,MAP,NDCG' "
               "--random-seed={seed}")
+#              "--measures='AUC,prec@5,prec@10,MAP,NDCG' "
+ 
 
 
 def mml_rating_prediction(kwargs):
-    tmp_filename = "{}-{}-{}.tmp.out".format(kwargs['p'], kwargs['alg'], randint(0, 999999))
-    tmp_file_path = os.path.join(stats.aux.TMP_DIR, tmp_filename)
+   
+    tmp_filename = "{}-{}.predictions.out".format(kwargs['p'], kwargs['alg'])
+    tmp_file_path = os.path.join(kwargs['data'],stats.aux.TMP_DIR, tmp_filename)
+
+    if not os.path.isdir(os.path.join(kwargs['data'],stats.aux.TMP_DIR)):
+        os.mkdir(os.path.join(kwargs['data'],stats.aux.TMP_DIR))
+
     kwargs['pred_rp_tmp'] = tmp_file_path
     command = mml_rp_cmd.format(**kwargs)
     print(command)
     os.system(command)
+    ranking_file_name = tmp_filename.replace('.predictions','')
+
+    create_rankings(kwargs['base'],tmp_file_path,kwargs['output_dir'],
+                    ranking_file_name,rank_size=100)
+
+
+
     # rp_to_ranking(tmp_file_path, kwargs['pred'])
 
 
-mml_rating_based = ["SVDPlusPlus"]
+mml_rating_based = [
+                "SVDPlusPlus",
+                "UserKNN",
+                "ItemKNN",
+                "FactorWiseMatrixFactorization",
+                "SigmoidSVDPlusPlus",
+                "BiPolarSlopeOne",
+                "MatrixFactorization",
+                "SlopeOne",
+                "UserItemBaseline",
+                "CoClustering",
+                "BiasedMatrixFactorization",
+                "SigmoidSVDPlusPlus",
+                "SigmoidItemAsymmetricFactorModel",
+                "SigmoidUserAsymmetricFactorModel",
+                "SigmoidCombinedAsymmetricFactorModel"                                
+                ]
 
 def mml_run(kwargs):
-    if kwargs['alg'] in mml_rating_based:
+    if kwargs['rating_pred']: #in mml_rating_based:
         mml_rating_prediction(kwargs)
     else:
         mml_item_ranking(kwargs)
@@ -561,6 +594,49 @@ def poisson_run(kwargs):
         ranking_frame_to_mml(ranking_frame, kwargs['pred'])
 
 
+
+
+
+#*******************************RATING TO RANKING STUFF*************************
+
+'''
+Create rankings without using the test file inflated in the past steps
+This function just uses the list of all items and the items already rated by 
+the users in the training file
+
+'''
+def create_rankings(original_train,predictions_f,outfolder,out_name,rank_size=100):
+    
+    #load train file and the file with the predictions 
+    train_f = mml_to_frame(original_train)
+    pred_f = mml_to_frame(predictions_f)
+    #output file
+    rankings_f = open(os.path.join(outfolder,out_name),'w')     
+    
+    usrs_ids = sorted(train_f.user_id.unique())
+    item_list = sorted(train_f.item_id.unique())
+
+    for usr_idx,user in enumerate(usrs_ids):#test_data.keys():
+
+
+        #load the predictions made in the previous step by the rating prediction algorithm
+        #sort the items by rating and returns only the first rank_size items 
+
+        result = pred_f[(pred_f.user_id==user)].sort('rating',ascending=False)[:rank_size]
+        
+        #converting to mml string format
+        s = '{0}\t['.format(user)
+        s += ','.join([str(x)+':'+str(y) for x,y in zip(result.item_id,result.rating)])
+        s += ']\n'
+        rankings_f.write(s)
+
+    #pred_f.close()
+    rankings_f.close()
+
+
+#*******************************END*************************
+
+
 def arg_set_for_run(p, alg, args, conf):
     base_filename = conf['base_form'].format(p)
     hits_filename = conf['hits_form'].format(p)
@@ -620,6 +696,8 @@ def arg_set_for_run(p, alg, args, conf):
         'librec_binary': librec_binary_str,
         'librec_template_dir': librec_template_dir_str,
         'base': base_str,
+        'data' : args.data,
+        'output_dir' : args.output_dir,
         'test': hits_str,
         'alg': alg,
         'p': p,
@@ -629,7 +707,8 @@ def arg_set_for_run(p, alg, args, conf):
         'num_items': num_items,
         'seed': 123,
         'results': results_str,
-        "poisson_binary": poisson_binary_str
+        "poisson_binary": poisson_binary_str,
+        "rating_pred" : args.rating_pred
     }
 
     return kwargs
@@ -723,7 +802,7 @@ def main():
 
     conf = stats.aux.load_configs(stats.aux.CONF_DEFAULT,
                             os.path.join(args.data, stats.aux.BASE_CONF),
-                            args.config)
+                            os.path.join(args.data,args.config))
 
 
 
