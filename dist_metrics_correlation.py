@@ -39,8 +39,8 @@ def parse_args():
     return parser.parse_args()
 
 
-COLORS = ["b","r","g","p"]
-SYMBOLS = ["o","v","s","^"]
+COLORS = ["cyan","green","black","purple"]
+SYMBOLS = ["o","*","s","X"]
 
 if __name__ == "__main__":
 
