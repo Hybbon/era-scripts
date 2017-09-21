@@ -2,6 +2,22 @@
 
 ARGPARSE_PARAMS = ("-H", "--hpp", "Hit per position histograms")
 MODULE_NAME = "hpp"
+ACRONYMS = {"BPRSLIM" : "BPRSLIM",
+        	"CofiRank" : "Cofi",
+	        "FISM_librec" : "FISM",
+        	"Hybrid_librec" : "Hybrid",
+        	"ItemKNN" : "ItemKNN",
+        	"LDA_librec" : "LDA",
+        	"LeastSquareSLIM" : "LSSLIM",
+        	"libfm" : "libFM",
+        	"MostPopular" : "MP",
+        	"MultiCoreBPRMF" : "BPRMF",
+        	"RankALS_librec" : "RALS",
+        	"SoftMarginRankingMF" : "SMRMF",
+        	"WRMF" :  "WRMF",
+        	"Poisson" : "PF",
+            "CoFactor" : "CF"}
+
 
 import os
 import numpy as np
@@ -67,8 +83,8 @@ def plot(res, dsr, output_dir, conf, ext='pdf'):
     data = []
     data.append(('all (mean)', res_avg['all_algs']))
 
-    data.append((best_key, res_avg[best_key]))
-    data.append((worst_key, res_avg[worst_key]))
+    data.append((ACRONYMS[best_key]+' (best)', res_avg[best_key]))
+    data.append((ACRONYMS[worst_key]+' (worst)', res_avg[worst_key]))
 
     data_mp = data[:]
 

@@ -2,6 +2,7 @@ import matplotlib as mpl
 mpl.use('PDF')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tkr
+from matplotlib.lines import Line2D
 # import matplotlib.figure as mfig
 import numpy as np
 from math import ceil
@@ -157,10 +158,16 @@ def plot_multiple_cumul(addr, title, x_label, x, y_label, data, y_range=None):
     line_styles = ['-', "--", "-.", ":"]
     style = itertools.cycle(line_styles)
 
+
+    markers = ["*",'D', "^", "."]
+    markers_styles = itertools.cycle(markers)
+
+    m = 0;
     for label, y in data:
         y = np.array(y) / sum(y)
         y = np.cumsum(y)
-        ax.plot(x, y, label=label, linestyle=next(style), linewidth=2.5)
+        ax.plot(x, y, label=label, linestyle='-', marker=markers[m], linewidth=0.5, markersize=5)
+        m += 1
 
     ax.legend(loc='lower right')
     plt.ylim(y_range)
