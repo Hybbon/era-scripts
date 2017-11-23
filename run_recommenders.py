@@ -376,8 +376,8 @@ def librec_make_config(alg, kwargs, cfg_path, out_path):
         for line in template:
             out.write(line + "\n")
 
-        base_in = "dataset.ratings=./{0}".format(kwargs['base'])
-        test_in = "evaluation.setup=test-set -f ./{0} --rand-seed 1 --test-view all".format(kwargs['test'])
+        base_in = "dataset.ratings={0}".format(kwargs['base'])
+        test_in = "evaluation.setup=test-set -f {0} --rand-seed 1 --test-view all".format(kwargs['test'])
         output_setup = "output.setup=on -dir ./{0}/".format(out_path)
         ranking_setup = "item.ranking=on -topN {0}".format(kwargs['num_items'])
 
