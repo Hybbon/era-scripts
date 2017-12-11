@@ -117,9 +117,9 @@ def footrule(t):
     return stats.metrics.footrule(*t)
 
 DISTANCE_FUNCTIONS = [
-    # kendall,
+    kendall,
     kendall_samuel,
-    # footrule
+    footrule
 ]
 
 def compute_distance_frames(algs, num_processes, users_to_use=[]):
