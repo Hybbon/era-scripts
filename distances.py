@@ -27,6 +27,7 @@ found through the "-h" flag. Here are some examples::
     python distances.py r1.out r2.out -o output_file.csv
 """
 
+import collections
 import itertools
 import pandas as pd
 import scipy.stats
@@ -82,7 +83,7 @@ def distance_matrix_users(algs, function,algs_to_compare = [], num_processes=1):
 
 def distance_matrix(algs, function, num_processes,users_to_use=[]):
     """Generates pairwise distance matrix according to a distance function"""
-    alg_index = {alg: i for i, alg in enumerate(sorted(algs.keys()))}
+    alg_index = collections.OrderedDict((alg, i) for i, alg in enumerate(sorted(algs.keys())))
     distances = np.ndarray((len(algs), len(algs)), dtype=float)
 
     for alg1, alg2 in itertools.product(algs.keys(), repeat=2):
@@ -102,7 +103,8 @@ def distance_matrix(algs, function, num_processes,users_to_use=[]):
         mean = sum(user_results) / len(user_results)
         distances[alg_index[alg1], alg_index[alg2]] = mean
 
-    return distances
+    alg_names = list(alg_index.keys())
+    return pd.DataFrame(distances, index=alg_names, columns=alg_names)
 
 
 def kendall_samuel(t):
@@ -115,28 +117,38 @@ def footrule(t):
     return stats.metrics.footrule(*t)
 
 DISTANCE_FUNCTIONS = [
-    kendall,
+    # kendall,
     kendall_samuel,
-    footrule
+    # footrule
 ]
 
+def compute_distance_frames(algs, num_processes, users_to_use=[]):
+    """Computes distance matrix dataframes for a list of algorithms."""
+    logger.warn("Initiating distance matrix calculations")
 
-def distances(algs, num_processes,users_to_use=[]):
-    """Computes mean distances for an algorithm via defined functions"""
-    logger.warn("Initiating distance frame calculations")
-    means = pd.DataFrame()
+    frames = {}
 
     for f in DISTANCE_FUNCTIONS:
-        logger.warn("Computing {} matrix".format(f.__name__))
+        function_name = f.__name__
+        logger.warn("Computing {} matrix".format(function_name))
         m = distance_matrix(algs, f, num_processes,users_to_use)
+        frames[function_name] = m
+
+    return frames
+
+
+def mean_distances(frames, algs):
+    """Computes mean distances from computed distance matrices."""
+    logger.warn("Computing mean distances from matrices.")
+    means = pd.DataFrame()
+
+    for name, f in frames.items():
         # The mean value is not computed directly because the matrix contains
         # the distance between an algorithm and itself. We must subtract 1 from
         # the number of algorithms.
-        means[f.__name__] = m.sum(axis=0) / (len(algs) - 1)
+        means[name] = f.sum(axis=0) / (f.shape[0] - 1)
 
-    alg_names = sorted([os.path.basename(path) for path in algs.keys()])
-    means['alg_names'] = alg_names
-    return means.set_index('alg_names')
+    return means
 
 
 def slice_rankings(d, length):
@@ -165,6 +177,19 @@ def save_distances(distances, path):
     distances.to_csv(path)
 
 
+def save_matrix_frames(frames, out_dir):
+    logger.warn('Saving distance matrices to %s', out_dir)
+
+    if not os.path.exists(out_dir):
+        logger.warn('Creating directory %s', out_dir)
+        os.makedirs(out_dir)
+
+    for name, f in frames.items():
+        path = os.path.join(out_dir, name + '.csv')
+        logger.warn('Saving matrix for %s to %s', name, path)
+        f.to_csv(path)
+
+
 def parse_args():
     """Parses command line parameters through argparse and returns parsed args.
     """
@@ -184,8 +209,10 @@ def parse_args():
 def main():
     args = parse_args()
     algs = load_algs(args.files, args.length)
-    d = distances(algs, args.processes)
+    frames = compute_distance_frames(algs, args.processes)
+    d = mean_distances(frames, algs)
     save_distances(d, args.output)
+    save_matrix_frames(frames, 'distance-matrices/')
 
 
 if __name__ == "__main__":

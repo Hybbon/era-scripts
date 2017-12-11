@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 from itertools import combinations
 from ..plotting import plot_bar_chart, plot_all_and_hits, plot_frame_histogram
-import ipdb
 
 
 #TODO corrigir para trabalhar com multiplos slices vindos do arquivo de config
