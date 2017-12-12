@@ -122,13 +122,15 @@ DISTANCE_FUNCTIONS = [
     footrule
 ]
 
-def compute_distance_frames(algs, num_processes, users_to_use=[]):
+FUNCTION_BY_NAME = {f.__name__: f for f in DISTANCE_FUNCTIONS}
+
+def compute_distance_frames(algs, functions, num_processes, users_to_use=[]):
     """Computes distance matrix dataframes for a list of algorithms."""
     logger.warn("Initiating distance matrix calculations")
 
     frames = {}
 
-    for f in DISTANCE_FUNCTIONS:
+    for f in functions:
         function_name = f.__name__
         logger.warn("Computing {} matrix".format(function_name))
         m = distance_matrix(algs, f, num_processes,users_to_use)
@@ -177,15 +179,11 @@ def save_distances(distances, path):
     distances.to_csv(path)
 
 
-def save_matrix_frames(frames, out_dir):
-    logger.warn('Saving distance matrices to %s', out_dir)
-
-    if not os.path.exists(out_dir):
-        logger.warn('Creating directory %s', out_dir)
-        os.makedirs(out_dir)
+def save_matrix_frames(frames, output_dir):
+    logger.warn('Saving distance matrices to %s', output_dir)
 
     for name, f in frames.items():
-        path = os.path.join(out_dir, name + '.csv')
+        path = os.path.join(output_dir, name + '.csv')
         logger.warn('Saving matrix for %s to %s', name, path)
         f.to_csv(path)
 
@@ -198,21 +196,32 @@ def parse_args():
                         help="ranking files to be compared.")
     parser.add_argument("-o", "--output", default="distances.csv",
                         help="output csv to be written. (default: %(default)s)")
+    parser.add_argument("-d", "--output_dir", default=".",
+                        help="directory to which outputs should be written. "
+                        "(default: %(default)s)")
     parser.add_argument("-p", "--processes", type=int, default=1,
                         help="number of processes for parallel execution. "
                         "(default: %(default)s)")
     parser.add_argument("-l", "--length", type=int, default=20,
                         help="length of the rankings to be considered")
+    parser.add_argument('-f','--function', action='append', help='distance functions to be computed', choices=FUNCTION_BY_NAME.keys(), required=True)
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     algs = load_algs(args.files, args.length)
-    frames = compute_distance_frames(algs, args.processes)
+
+    functions = [FUNCTION_BY_NAME[name] for name in args.function]
+    frames = compute_distance_frames(algs, functions, args.processes)
     d = mean_distances(frames, algs)
-    save_distances(d, args.output)
-    save_matrix_frames(frames, 'distance-matrices/')
+
+    if not os.path.exists(args.output_dir):
+        logger.warn('Creating directory %s', args.output_dir)
+        os.makedirs(args.output_dir)
+
+    save_distances(d, os.path.join(args.output_dir, args.output))
+    save_matrix_frames(frames, args.output_dir)
 
 
 if __name__ == "__main__":
