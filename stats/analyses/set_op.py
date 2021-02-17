@@ -35,7 +35,7 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
         algs = new_algs
 
     #TODO Conferir possivel causador de estouro de memoria
-    tuples = [] 
+    #tuples = [] #REMOVE
     
 
     alg_res_list = list(algs.values())
@@ -67,12 +67,12 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
             for user_id, ranking in isect.lists.items():
 
                 tuples_aux[-1][len(ranking)] += 1
-                tuples.append((
-                    r,
-                    user_id,
-                    len(ranking),
-                    comb
-                ))
+                #tuples.append(( #REMOVE
+                #    r,
+                #    user_id,
+                #    len(ranking),
+                #    comb
+                #))
             #ipdb.set_trace()
             avg_isect_len = isect.avg_len()
             isect_lenghts.append(avg_isect_len)            
@@ -80,10 +80,11 @@ def set_operation_stats(algs, begin=0, end=None, hits=None):
 
         
 
-    col_names = ("comb_length", "user_id", "isect_size", "comb")
-    frame = pd.DataFrame.from_records(tuples, columns=col_names)
+    #col_names = ("comb_length", "user_id", "isect_size", "comb") #REMOVE
+    #frame = pd.DataFrame.from_records(tuples, columns=col_names) #REMOVE
 
-    return avg_isect_len_per_r, frame, tuples_aux
+    #return avg_isect_len_per_r, frame, tuples_aux
+    return avg_isect_len_per_r, tuples_aux
 
 
 def print_hits_per_alg(algs, hits):
@@ -156,14 +157,16 @@ def generate(dsr, results, conf):
         print()
 
         for s_i, s in enumerate(slices):
-            res['isect_all'][s_i, p_i, :], frame_all, frame_all_aux = (
+            #res['isect_all'][s_i, p_i, :], frame_all, frame_all_aux = ( #REMOVE
+            res['isect_all'][s_i, p_i, :], frame_all_aux = (
                 set_operation_stats(algs, *s))
-            frames_all[s] = frame_all
+            #frames_all[s] = frame_all #REMOVE
             frames_all_aux[s] = frame_all_aux
 
-            res['isect_hits'][s_i, p_i, :], frame_hits, frame_hits_aux = (
+            #res['isect_hits'][s_i, p_i, :], frame_hits, frame_hits_aux = (
+            res['isect_hits'][s_i, p_i, :], frame_hits_aux = (
                 set_operation_stats(algs, *s, hits=hits))
-            frames_hits[s] = frame_hits
+            #frames_hits[s] = frame_hits
             frames_hits_aux[s] = frame_hits_aux
 
     def avg(iterable):
@@ -191,11 +194,11 @@ def generate(dsr, results, conf):
 
     #ipdb.set_trace()
     #frames_all = {s: (isect_histogram_frame(f, best_comb),
-    frames_all = {s: (isect_histogram_frame(f))
-                  for s, f in frames_all.items()}
+    #frames_all = {s: (isect_histogram_frame(f))
+    #              for s, f in frames_all.items()}
     #frames_hits = {s: (isect_histogram_frame(f, best_comb),
-    frames_hits = {s:(isect_histogram_frame(f))
-                   for s, f in frames_hits.items()}
+    #frames_hits = {s:(isect_histogram_frame(f))
+    #               for s, f in frames_hits.items()}
     #ipdb.set_trace()
 
     
